@@ -47,6 +47,61 @@ void OLED_ShowCN(uint8_t row, uint8_t col, const char *cn, uint8_t inv)
 
 void OLED_ShowStart(void)
 {
+    OLED_Clr_Screen();
+    OLED_Show_MoreCharF6X12(0, 0, "Hello OLED!");
+    OLED_Show_MoreCharF6X12(2, 0, "SDA=PA11 SCL=PA12");
+    OLED_Show_MoreCharF6X12(4, 0, "I2C Addr: 0x78");
+    OLED_Show_MoreCharF6X12(6, 0, "Test OK!");
+}
+nclude "oled_show.h"
+#include <stdio.h>
+#include <string.h>
+
+extern FishTank_DataStruct  FishTank_Data;
+extern FishTank_FlagStruct  FishTank_Flag;
+extern FishTank_SetStruct   FishTank_Set;
+extern FishTank_FeedStruct  FishTank_Feed;
+extern uint8_t AutoSet_Index;
+extern uint8_t ManualSet_Index;
+extern volatile uint8_t ESP01S_WiFiConnected;
+
+
+static char _showBuf[22];
+
+
+#define AUTOSET_ITEMS       7
+#define MANUALSET_ITEMS     6
+
+
+void OLED_ShowString(uint8_t row, uint8_t col, const char *str)
+{
+    OLED_Show_MoreCharF6X12(row, col, (uint8_t *)str);
+}
+
+void OLED_ShowFloat(uint8_t row, uint8_t col, float val, uint8_t decimal)
+{
+    char buf[14];
+    if (decimal == 1)      sprintf(buf, "%.1f", val);
+    else if (decimal == 2) sprintf(buf, "%.2f", val);
+    else                   sprintf(buf, "%.0f", val);
+    OLED_Show_MoreCharF6X12(row, col, (uint8_t *)buf);
+}
+
+void OLED_ShowInt(uint8_t row, uint8_t col, int val)
+{
+    char buf[10];
+    sprintf(buf, "%d", val);
+    OLED_Show_MoreCharF6X12(row, col, (uint8_t *)buf);
+}
+
+void OLED_ShowCN(uint8_t row, uint8_t col, const char *cn, uint8_t inv)
+{
+    ZoneBitCode_OLED_Show_ChineseF6X12(row, col, (uint8_t *)cn, inv);
+}
+
+
+void OLED_ShowStart(void)
+{
     ZoneBitCode_OLED_Show_ChineseF6X12(2, 18, "\xd6\xc7", 0);
     ZoneBitCode_OLED_Show_ChineseF6X12(2, 30, "\xc4\xdc", 0);
     ZoneBitCode_OLED_Show_ChineseF6X12(2, 42, "\xd3\xe3", 0);
