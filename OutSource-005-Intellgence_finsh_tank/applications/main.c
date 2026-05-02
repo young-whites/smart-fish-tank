@@ -1,28 +1,24 @@
-/*
- * Copyright (c) 2006-2026, RT-Thread Development Team
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2026-05-02     RT-Thread    first version
- */
-
 #include <rtthread.h>
-
-#define DBG_TAG "main"
-#define DBG_LVL DBG_LOG
-#include <rtdbg.h>
+#include <stdint.h>
+#include "app_data.h"
+#include "app_sensor.h"
+#include "app_control.h"
+#include "app_display.h"
+#include "app_key.h"
+#include "app_alarm.h"
+#include "app_feed.h"
+#include "app_wifi.h"
 
 int main(void)
 {
-    int count = 1;
-
-    while (count++)
-    {
-        LOG_D("Hello RT-Thread!");
-        rt_thread_mdelay(1000);
-    }
+    app_data_init();
+    app_sensor_init();
+    app_control_init();
+    app_display_init();
+    app_key_init();
+    app_alarm_init();
+    app_feed_init();
+    app_wifi_init();
 
     return RT_EOK;
 }

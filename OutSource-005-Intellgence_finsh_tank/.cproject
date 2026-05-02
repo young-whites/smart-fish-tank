@@ -70,6 +70,7 @@
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}/.}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}/applications}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//.}&quot;" />
+                  <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/components/finsh}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/include}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/libcpu/arm/common}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/libcpu/arm/cortex-m3}&quot;" />
@@ -160,6 +161,7 @@
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}/.}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}/applications}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//.}&quot;" />
+                  <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/components/finsh}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/include}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/libcpu/arm/common}&quot;" />
                   <listOptionValue builtIn="false" value="&quot;${workspace_loc://${ProjName}//rt-thread/libcpu/arm/cortex-m3}&quot;" />
@@ -172,7 +174,7 @@
             </toolChain>
           </folderInfo>
           <sourceEntries>
-            <entry excluding="//rt-thread/components|//rt-thread/libcpu/arm/arm926|//rt-thread/libcpu/arm/armv6|//rt-thread/libcpu/arm/common/divsi3.S|//rt-thread/libcpu/arm/cortex-a|//rt-thread/libcpu/arm/cortex-m0|//rt-thread/libcpu/arm/cortex-m23|//rt-thread/libcpu/arm/cortex-m3/context_iar.S|//rt-thread/libcpu/arm/cortex-m3/context_rvds.S|//rt-thread/libcpu/arm/cortex-m33|//rt-thread/libcpu/arm/cortex-m4|//rt-thread/libcpu/arm/cortex-m7|//rt-thread/libcpu/arm/cortex-r4|//rt-thread/libcpu/risc-v|//rt-thread/src/device.c|//rt-thread/src/mem.c|//rt-thread/src/memheap.c|//rt-thread/src/mempool.c|//rt-thread/src/slab.c|//rt-thread/tools" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="" />
+            <entry excluding="//rt-thread/libcpu/arm/arm926|//rt-thread/libcpu/arm/armv6|//rt-thread/libcpu/arm/common/divsi3.S|//rt-thread/libcpu/arm/cortex-a|//rt-thread/libcpu/arm/cortex-m0|//rt-thread/libcpu/arm/cortex-m23|//rt-thread/libcpu/arm/cortex-m3/context_iar.S|//rt-thread/libcpu/arm/cortex-m3/context_rvds.S|//rt-thread/libcpu/arm/cortex-m33|//rt-thread/libcpu/arm/cortex-m4|//rt-thread/libcpu/arm/cortex-m7|//rt-thread/libcpu/arm/cortex-r4|//rt-thread/libcpu/risc-v|//rt-thread/src/device.c|//rt-thread/src/mem.c|//rt-thread/src/memheap.c|//rt-thread/src/mempool.c|//rt-thread/src/slab.c|//rt-thread/tools" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="" />
           </sourceEntries>
         </configuration>
       </storageModule>
