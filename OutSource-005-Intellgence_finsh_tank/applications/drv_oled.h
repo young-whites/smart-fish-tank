@@ -43,6 +43,17 @@ void oled_draw_string(uint8_t x, uint8_t page, const char *str);
 void oled_draw_number(uint8_t x, uint8_t page, int32_t num);
 void oled_draw_float(uint8_t x, uint8_t page, float num, uint8_t decimal);
 
+/* 16x16 汉字绘制 */
+void oled_draw_chinese_char(uint8_t x, uint8_t page, uint16_t unicode);
+void oled_draw_chinese_string(uint8_t x, uint8_t page, const char *utf8_str);
+
+/* 混合行: 汉字标签(16px高) + ASCII值(6x12)
+ * chinese_label: 汉字标签 UTF-8 字符串
+ * ascii_text:    ASCII 文本 (数字/英文/符号)
+ * page:          起始页 (0/2/4/6)
+ */
+void oled_draw_mix_line(uint8_t page, const char *chinese_label, const char *ascii_text);
+
 void oled_refresh(void);
 
 #endif /* APPLICATIONS_DRV_OLED_H_ */
