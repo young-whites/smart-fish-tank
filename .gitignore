@@ -53,3 +53,28 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Keil MDK build outputs
+*.crf
+*.axf
+*.htm
+*.lnp
+*.sct
+*.dep
+*.lst
+*.build_log.htm
+Objects/
+Listings/
+
+# Keil user-specific files
+*.uvguix.*
+*.uvoptx
+
+# IDE config
+.vscode/
+
+# Debug config
+DebugConfig/
+
+# Batch scripts
+keilkill.bat
