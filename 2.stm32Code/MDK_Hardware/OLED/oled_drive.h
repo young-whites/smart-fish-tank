@@ -5,7 +5,6 @@
 
 
 
-//*************OLED ���ź궨��******************
 //SDA  PA11
 #define OLED_SDA_RCC_APB2Periph_GPIOX   RCC_APB2Periph_GPIOA
 #define OLED_SDA_Port	                GPIOA
@@ -21,8 +20,6 @@
 #define OLED_SCL_Clr()	                GPIO_ResetBits(OLED_SCL_Port,OLED_SCL_Pin)
 
 
-
-//***************OLED ���������������******************
 void OLED_GPIO_Config(void);
 void OLED_IIC_Start(void);
 void OLED_IIC_Stop(void);
