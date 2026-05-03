@@ -4,6 +4,7 @@
  */
 
 #include "drv_oled.h"
+#include "font_8x16.h"
 #include "stm32f1xx.h"
 #include <string.h>
 
@@ -449,6 +450,45 @@ void oled_draw_float(uint8_t x, uint8_t page, float num, uint8_t decimal)
             div /= 10;
             if (x > OLED_WIDTH - 6) break;
         }
+    }
+}
+
+/* ===================== 8x16 字体绘制 ===================== */
+
+void oled_draw_char_8x16(uint8_t x, uint8_t page, char ch)
+{
+    if (ch < 0x20 || ch > 0x7E) return;
+    if (x > OLED_WIDTH - 8) return;
+    if (page > OLED_PAGES - 2) return;
+
+    const uint8_t *glyph = &font_8x16_data[(ch - 0x20) * 16];
+
+    /* 字体: 每行1字节(水平), OLED: 每列1字节(垂直) → 需转置 */
+    for (uint8_t col = 0; col < 8; col++) {
+        uint8_t page_data = 0;
+        for (uint8_t row = 0; row < 8; row++) {
+            if (glyph[row] & (0x80 >> col))
+                page_data |= (1 << row);
+        }
+        oled_buf[page * OLED_WIDTH + x + col] = page_data;
+    }
+    for (uint8_t col = 0; col < 8; col++) {
+        uint8_t page_data = 0;
+        for (uint8_t row = 0; row < 8; row++) {
+            if (glyph[8 + row] & (0x80 >> col))
+                page_data |= (1 << row);
+        }
+        oled_buf[(page + 1) * OLED_WIDTH + x + col] = page_data;
+    }
+}
+
+void oled_draw_string_8x16(uint8_t x, uint8_t page, const char *str)
+{
+    while (*str) {
+        if (x > OLED_WIDTH - 8) break;
+        oled_draw_char_8x16(x, page, *str);
+        x += 8;
+        str++;
     }
 }
 
