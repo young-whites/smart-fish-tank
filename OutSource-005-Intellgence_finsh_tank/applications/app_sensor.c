@@ -125,28 +125,93 @@ static float ds18b20_raw_to_float(int16_t raw)
 
 /* ========== ADC (CMSIS 寄存器) ========== */
 
+#define ADC_VREF        3.3f    /* 参考电压 */
+#define ADC_MAX         4095    /* 12bit ADC */
+#define ADC_AVG_SAMPLES 8       /* 多次采样取平均 */
+
 static void adc_init(void)
 {
-    /* 使能 ADC1 和 GPIOA 时钟 */
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
 
-    /* PA0, PA1, PA4 配置为模拟输入 (MODE=00, CNF=00) */
-    /* PA0 -> CRL[3:0], PA1 -> CRL[7:4], PA4 -> CRL[19:16] */
     GPIOA->CRL &= ~((0xFU << 0) | (0xFU << 4) | (0xFU << 16));
 
-    /* ADC 基本配置 */
     ADC1->CR2 = 0;
-    ADC1->CR2 |= ADC_CR2_ADON;  /* 开启 ADC */
-    ADC1->SQR1 = 0;             /* 1 次转换 */
+    ADC1->CR2 |= ADC_CR2_ADON;
+    ADC1->SQR1 = 0;
+    rt_thread_mdelay(10);  /* ADC 稳定 */
 }
 
-static uint16_t adc_read_channel(uint8_t channel)
+static uint16_t adc_read_raw(uint8_t channel)
 {
     ADC1->SQR3 = channel;
-    ADC1->CR2 |= ADC_CR2_ADON;           /* 启动转换 */
-    while(!(ADC1->SR & ADC_SR_EOC));     /* 等待完成 */
+    ADC1->CR2 |= ADC_CR2_ADON;
+    while(!(ADC1->SR & ADC_SR_EOC));
     return (uint16_t)(ADC1->DR);
+}
+
+/* 多次采样取平均，滤除噪声 */
+static uint16_t adc_read_avg(uint8_t channel)
+{
+    uint32_t sum = 0;
+    uint8_t i;
+    for(i = 0; i < ADC_AVG_SAMPLES; i++) {
+        sum += adc_read_raw(channel);
+    }
+    return (uint16_t)(sum / ADC_AVG_SAMPLES);
+}
+
+/* ADC 值 → 电压 (V) */
+static float adc_to_voltage(uint16_t adc_val)
+{
+    return (float)adc_val * ADC_VREF / (float)ADC_MAX;
+}
+
+/*
+ * 空气质量: MQ-135
+ *   ADC 原始值 → 电压 → 电阻比 Rs/R0 → PPM
+ *   简化: 直接用 ADC 值映射为 0~999 的空气质量指数
+ *   ADC 高 = 空气差 (电压高 = Rs 低 = 气体浓度高)
+ */
+static uint16_t calc_air_quality(uint16_t adc_val)
+{
+    /* 映射: ADC 0~4095 → 0~999 (空气质量指数) */
+    uint16_t aqi = (uint32_t)adc_val * 999 / ADC_MAX;
+    return aqi;
+}
+
+/*
+ * 水位: 模拟水位传感器
+ *   传感器输出 0~3.3V 对应 0~100%
+ *   线性映射，可根据实际传感器标定量程调整
+ */
+static uint8_t calc_water_level(uint16_t adc_val)
+{
+    /* 线性映射: ADC 0~4095 → 0~100% */
+    uint8_t level = (uint8_t)((uint32_t)adc_val * 100 / ADC_MAX);
+    if(level > 100) level = 100;
+    return level;
+}
+
+/*
+ * PH 值: 模拟 PH 传感器
+ *   标定参数 (需根据实际传感器和缓冲液校准):
+ *   - 中性溶液 (PH=7.0) 输出约 1.65V → ADC 2048
+ *   - 酸性溶液 (PH=4.0) 输出约 0.825V → ADC 1024
+ *   - 碱性溶液 (PH=10.0) 输出约 2.475V → ADC 3072
+ *   公式: PH = 7.0 + (ADC - 2048) * 7.0 / 2048
+ *         = 7.0 + (V - 1.65) * 7.0 / 1.65
+ */
+#define PH_NEUTRAL_ADC  2048    /* 中性 (PH=7.0) 对应 ADC 值 */
+#define PH_SLOPE        7.0f    /* PH 斜率: 每 1.65V 变化 7 个 PH */
+#define PH_RANGE        2048.0f /* ADC 范围 (对应 ±7 PH) */
+
+static float calc_ph_value(uint16_t adc_val)
+{
+    float ph = 7.0f + ((float)adc_val - PH_NEUTRAL_ADC) * PH_SLOPE / PH_RANGE;
+    if(ph < 0.0f) ph = 0.0f;
+    if(ph > 14.0f) ph = 14.0f;
+    return ph;
 }
 
 /* ========== 传感器采集线程 ========== */
@@ -160,7 +225,7 @@ uint8_t g_sensor_temp_valid = 0;  /* 1=DS18B20在线且数据有效 */
 static void sensor_thread_entry(void *param)
 {
     int16_t temp_raw;
-    uint16_t adc_val;
+    uint16_t adc_air, adc_water, adc_ph;
 
     RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
     adc_init();
@@ -174,16 +239,18 @@ static void sensor_thread_entry(void *param)
             rt_mutex_release(&mutex_data);
             g_sensor_temp_valid = 1;
         } else {
-            g_sensor_temp_valid = 0;  /* 传感器断线或CRC错误 */
+            g_sensor_temp_valid = 0;
         }
 
-        /* ADC 采集 */
+        /* ADC 多次采样 + 换算 */
+        adc_air   = adc_read_avg(ADC_AIR_CHANNEL);
+        adc_water = adc_read_avg(ADC_WATER_CHANNEL);
+        adc_ph    = adc_read_avg(ADC_PH_CHANNEL);
+
         rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
-        g_sensor.air_quality = adc_read_channel(ADC_AIR_CHANNEL);
-        adc_val = adc_read_channel(ADC_WATER_CHANNEL);
-        g_sensor.water_level = (uint8_t)((uint32_t)adc_val * 100 / 4095);
-        adc_val = adc_read_channel(ADC_PH_CHANNEL);
-        g_sensor.ph_value = (float)adc_val * 14.0f / 4095.0f;
+        g_sensor.air_quality = calc_air_quality(adc_air);
+        g_sensor.water_level = calc_water_level(adc_water);
+        g_sensor.ph_value    = calc_ph_value(adc_ph);
         rt_mutex_release(&mutex_data);
 
         rt_thread_mdelay(500);
