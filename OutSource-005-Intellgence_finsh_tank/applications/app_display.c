@@ -36,18 +36,6 @@ static uint8_t get_max_subs(void)
 
 /* ===================== 工具函数 ===================== */
 
-/* 清除 OLED 缓冲区中指定 page 范围的指定列区间 */
-static void clear_buf_region(uint8_t page_start, uint8_t page_end,
-                              uint8_t col_start, uint8_t col_end)
-{
-    uint8_t p, c;
-    for (p = page_start; p <= page_end && p < OLED_PAGES; p++) {
-        for (c = col_start; c <= col_end && c < OLED_WIDTH; c++) {
-            oled_buf[p * OLED_WIDTH + c] = 0;
-        }
-    }
-}
-
 static void draw_page_indicator(void)
 {
     char buf[8];
@@ -63,7 +51,7 @@ static void draw_main_p0_data(void)
     char buf[24];
     uint8_t p;
 
-    for (p = 0; p < 8; p++) clear_buf_region(p, p, 32, 127);
+    for (p = 0; p < 8; p++) oled_clear_region(p, p, 32, 127);
 
     if(g_sensor_temp_valid)
         rt_snprintf(buf, sizeof(buf), "%.2fC", g_sensor.water_temp);
@@ -88,7 +76,7 @@ static void draw_main_p1_data(void)
     char buf[24];
     uint8_t p;
 
-    for (p = 0; p < 8; p++) clear_buf_region(p, p, 32, 127);
+    for (p = 0; p < 8; p++) oled_clear_region(p, p, 32, 127);
 
     oled_draw_string(32, 0, (g_sensor.run_mode == MODE_AUTO) ? "Auto" : "Manu");
 
@@ -154,7 +142,7 @@ static void draw_threshold_p0_data(void)
 {
     char buf[24];
 
-    clear_buf_region(0, 3, 0, 127);
+    oled_clear_region(0, 3, 0, 127);
 
     oled_draw_string(0, 0, "-- Threshold Set --");
 
@@ -180,7 +168,7 @@ static void draw_threshold_p1_data(void)
 {
     char buf[24];
 
-    clear_buf_region(0, 3, 0, 127);
+    oled_clear_region(0, 3, 0, 127);
 
     rt_snprintf(buf, sizeof(buf), "PH Low: %5.1f   %s",
                 g_threshold.ph_lower,
@@ -249,7 +237,7 @@ static void draw_manual_data(void)
     char buf[24];
     uint8_t i;
 
-    clear_buf_region(0, 6, 0, 127);
+    oled_clear_region(0, 6, 0, 127);
 
     oled_draw_string(0, 0, "-- Manual Control --");
 

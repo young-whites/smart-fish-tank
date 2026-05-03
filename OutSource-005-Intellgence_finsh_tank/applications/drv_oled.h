@@ -32,6 +32,7 @@ void oled_write_data(uint8_t data);
 void oled_init(void);
 
 void oled_clear(void);
+void oled_clear_region(uint8_t page_start, uint8_t page_end, uint8_t col_start, uint8_t col_end);
 void oled_fill(uint8_t pattern);
 void oled_set_pos(uint8_t x, uint8_t page);
 void oled_display_on(void);

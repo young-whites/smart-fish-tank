@@ -257,6 +257,16 @@ void oled_clear(void)
     oled_refresh();
 }
 
+void oled_clear_region(uint8_t page_start, uint8_t page_end, uint8_t col_start, uint8_t col_end)
+{
+    uint8_t p, c;
+    for (p = page_start; p <= page_end && p < OLED_PAGES; p++) {
+        for (c = col_start; c <= col_end && c < OLED_WIDTH; c++) {
+            oled_buf[p * OLED_WIDTH + c] = 0;
+        }
+    }
+}
+
 void oled_fill(uint8_t pattern)
 {
     memset(oled_buf, pattern, sizeof(oled_buf));
