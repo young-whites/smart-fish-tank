@@ -507,23 +507,6 @@ static uint32_t _oled_utf8_decode(const char *str, int *bytes)
     return 0xFFFD;
 }
 
-void oled_draw_chinese_string(uint8_t x, uint8_t page, const char *utf8_str)
-{
-    if (!utf8_str) return;
-    uint8_t cx = x;
-    while (*utf8_str) {
-        int bytes = 0;
-        uint32_t cp = _oled_utf8_decode(utf8_str, &bytes);
-        if (cp == 0) break;
-        if (cp <= 0xFFFF && font_char_exists((uint16_t)cp)) {
-            if (cx > OLED_WIDTH - 16) break;
-            oled_draw_chinese_char(cx, page, (uint16_t)cp);
-            cx += 16;
-        }
-        utf8_str += bytes;
-    }
-}
-
 void oled_draw_mix_line(uint8_t page, const char *chinese_label, const char *ascii_text)
 {
     if (page > OLED_PAGES - 2) return;

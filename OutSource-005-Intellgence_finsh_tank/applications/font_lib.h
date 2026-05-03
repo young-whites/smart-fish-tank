@@ -29,26 +29,4 @@ const unsigned char* font_get_bitmap(uint16_t unicode);
  */
 int font_char_exists(uint16_t unicode);
 
-/**
- * @brief  在 LCD 指定位置绘制单个汉字
- * @param  x, y       左上角像素坐标
- * @param  unicode    Unicode 码点
- * @param  color      前景色
- * @param  bg_color   背景色 (0xFFFF 表示透明背景, 不画背景)
- */
-void font_draw_char(uint16_t x, uint16_t y, uint16_t unicode,
-                    uint16_t color, uint16_t bg_color);
-
-/**
- * @brief  在 LCD 指定位置绘制 UTF-8 字符串
- * @param  x, y       起始像素坐标
- * @param  utf8_str   UTF-8 编码字符串
- * @param  color      前景色
- * @param  bg_color   背景色
- * @note   字库中不存在的字符会被跳过(不占宽度)
- *         ASCII 字符不在本字库范围内, 请使用其他 ASCII 字体
- */
-void font_draw_string(uint16_t x, uint16_t y, const char* utf8_str,
-                      uint16_t color, uint16_t bg_color);
-
 #endif /* __FONT_LIB_H__ */

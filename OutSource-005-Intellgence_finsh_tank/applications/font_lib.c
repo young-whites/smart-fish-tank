@@ -239,7 +239,7 @@ static int font_find_index(uint16_t unicode)
 }
 
 /* ============================================================
- *  公开 API
+ *  公开 API (仅保留 OLED 驱动需要的接口)
  * ============================================================ */
 
 const unsigned char* font_get_bitmap(uint16_t unicode)
@@ -253,89 +253,4 @@ const unsigned char* font_get_bitmap(uint16_t unicode)
 int font_char_exists(uint16_t unicode)
 {
     return font_find_index(unicode) >= 0;
-}
-
-void font_draw_char(uint16_t x, uint16_t y, uint16_t unicode,
-                    uint16_t color, uint16_t bg_color)
-{
-    const unsigned char* bmp = font_get_bitmap(unicode);
-    if (!bmp)
-        return;
-
-    for (int row = 0; row < FONT_HEIGHT; row++) {
-        uint8_t hi = bmp[row * 2];
-        uint8_t lo = bmp[row * 2 + 1];
-
-        for (int col = 0; col < 8; col++) {
-            if (hi & (0x80 >> col))
-                oled_draw_pixel((uint8_t)(x + col), (uint8_t)(y + row), 1);
-            else if (bg_color != 0xFFFF)
-                oled_draw_pixel((uint8_t)(x + col), (uint8_t)(y + row), 0);
-        }
-        for (int col = 0; col < 8; col++) {
-            if (lo & (0x80 >> col))
-                oled_draw_pixel((uint8_t)(x + 8 + col), (uint8_t)(y + row), 1);
-            else if (bg_color != 0xFFFF)
-                oled_draw_pixel((uint8_t)(x + 8 + col), (uint8_t)(y + row), 0);
-        }
-    }
-}
-
-static uint32_t utf8_decode(const char* str, int* bytes)
-{
-    unsigned char c = (unsigned char)str[0];
-
-    if (c == 0) { *bytes = 0; return 0; }
-
-    if (c < 0x80) {
-        *bytes = 1;
-        return c;
-    }
-    else if ((c & 0xE0) == 0xC0) {
-        *bytes = 2;
-        return ((uint32_t)(c & 0x1F) << 6) |
-               ((uint32_t)(unsigned char)str[1] & 0x3F);
-    }
-    else if ((c & 0xF0) == 0xE0) {
-        *bytes = 3;
-        return ((uint32_t)(c & 0x0F) << 12) |
-               ((uint32_t)(unsigned char)str[1] & 0x3F) << 6 |
-               ((uint32_t)(unsigned char)str[2] & 0x3F);
-    }
-    else if ((c & 0xF8) == 0xF0) {
-        *bytes = 4;
-        return ((uint32_t)(c & 0x07) << 18) |
-               ((uint32_t)(unsigned char)str[1] & 0x3F) << 12 |
-               ((uint32_t)(unsigned char)str[2] & 0x3F) << 6 |
-               ((uint32_t)(unsigned char)str[3] & 0x3F);
-    }
-
-    *bytes = 1;
-    return 0xFFFD;
-}
-
-void font_draw_string(uint16_t x, uint16_t y, const char* utf8_str,
-                      uint16_t color, uint16_t bg_color)
-{
-    if (!utf8_str)
-        return;
-
-    uint16_t cursor_x = x;
-
-    while (*utf8_str) {
-        int bytes = 0;
-        uint32_t codepoint = utf8_decode(utf8_str, &bytes);
-
-        if (codepoint == 0)
-            break;
-
-        if (codepoint <= 0xFFFF) {
-            if (font_char_exists((uint16_t)codepoint)) {
-                font_draw_char(cursor_x, y, (uint16_t)codepoint, color, bg_color);
-                cursor_x += FONT_WIDTH;
-            }
-        }
-
-        utf8_str += bytes;
-    }
 }

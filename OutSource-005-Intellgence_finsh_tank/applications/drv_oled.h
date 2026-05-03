@@ -44,9 +44,8 @@ void oled_draw_string(uint8_t x, uint8_t page, const char *str);
 void oled_draw_number(uint8_t x, uint8_t page, int32_t num);
 void oled_draw_float(uint8_t x, uint8_t page, float num, uint8_t decimal);
 
-/* 16x16 汉字绘制 */
+/* 16x16 汉字绘制 (仅主页使用) */
 void oled_draw_chinese_char(uint8_t x, uint8_t page, uint16_t unicode);
-void oled_draw_chinese_string(uint8_t x, uint8_t page, const char *utf8_str);
 
 /* 混合行: 汉字标签(16px高) + ASCII值(6x12)
  * chinese_label: 汉字标签 UTF-8 字符串
