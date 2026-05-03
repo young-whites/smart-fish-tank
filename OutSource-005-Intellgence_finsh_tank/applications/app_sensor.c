@@ -128,7 +128,7 @@ static uint16_t adc_read_channel(uint8_t channel)
 /* ========== 传感器采集线程 ========== */
 
 static struct rt_thread sensor_thread;
-static rt_uint8_t sensor_stack[512];
+static rt_uint8_t sensor_stack[384];
 
 static void sensor_thread_entry(void *param)
 {

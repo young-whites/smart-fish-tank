@@ -48,7 +48,7 @@ void app_feed_trigger(void)
 }
 
 static struct rt_thread feed_thread;
-static rt_uint8_t feed_stack[512];
+static rt_uint8_t feed_stack[384];
 
 static void feed_thread_entry(void *param)
 {

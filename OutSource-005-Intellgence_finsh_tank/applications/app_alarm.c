@@ -48,7 +48,7 @@ static void alarm_check(void)
 }
 
 static struct rt_thread alarm_thread;
-static rt_uint8_t alarm_stack[512];
+static rt_uint8_t alarm_stack[384];
 
 static void alarm_thread_entry(void *param)
 {

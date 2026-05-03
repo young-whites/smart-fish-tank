@@ -49,7 +49,7 @@ static uint8_t key_scan(void)
 }
 
 static struct rt_thread key_thread;
-static rt_uint8_t key_stack[512];
+static rt_uint8_t key_stack[256];
 
 static void key_thread_entry(void *param)
 {

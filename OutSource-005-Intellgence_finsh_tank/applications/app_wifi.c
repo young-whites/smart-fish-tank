@@ -7,7 +7,7 @@
 volatile uint8_t g_wifi_connected = 0;
 
 /* 协议帧: 0xAA | CMD | LEN | DATA | SUM | 0x55 */
-static uint8_t frame_buf[256];
+static uint8_t frame_buf[128];
 
 /* ========== USART2 寄存器操作 ========== */
 
@@ -127,7 +127,7 @@ static uint8_t wifi_try_connect(void)
 }
 
 static struct rt_thread wifi_thread;
-static rt_uint8_t wifi_stack[1024];
+static rt_uint8_t wifi_stack[768];
 
 static void wifi_thread_entry(void *param)
 {
