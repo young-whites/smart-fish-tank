@@ -7,18 +7,18 @@
 
 /* ========== DS18B20 1-Wire (PB13) ========== */
 
-static uint8_t ds18b20_valid = 0;  /* 1=传感器在线 */
+static uint8_t ds18b20_valid = 0;
 
 static void ds18b20_pin_out(void)
 {
     GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x3U << 20);
+    GPIOB->CRH |=  (0x3U << 20);  /* 推挽输出 50MHz */
 }
 
 static void ds18b20_pin_in(void)
 {
     GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x8U << 20);
+    GPIOB->CRH |=  (0x8U << 20);  /* 上拉输入 */
     GPIOB->BSRR = (1U << 13);
 }
 
@@ -32,51 +32,79 @@ static void ds18b20_delay_us(uint32_t us)
     while(n--);
 }
 
+/* 复位 + 检测存在脉冲 */
 static uint8_t ds18b20_reset(void)
 {
     uint8_t retry = 0;
+
     ds18b20_pin_out();
     ds18b20_dq_low();
-    ds18b20_delay_us(500);
+    ds18b20_delay_us(750);     /* 拉低 750μs (规格: 480μs min) */
     ds18b20_dq_high();
-    ds18b20_delay_us(60);
-    ds18b20_pin_in();
+    ds18b20_delay_us(15);       /* 释放 15μs */
+    ds18b20_pin_in();           /* ⭐ 关键: 切输入, 让传感器拉低总线 */
+
+    /* 等待传感器拉低 (presence pulse 开始) */
     while(ds18b20_dq_read() && retry < 200) { retry++; ds18b20_delay_us(1); }
     if(retry >= 200) return 1;
+
+    /* 等待传感器释放 (presence pulse 结束) */
     retry = 0;
     while(!ds18b20_dq_read() && retry < 240) { retry++; ds18b20_delay_us(1); }
+    if(retry >= 240) return 1;
+
     return 0;
 }
 
+/* 写一个字节 */
 static void ds18b20_write_byte(uint8_t dat)
 {
-    uint8_t i;
+    uint8_t j;
     ds18b20_pin_out();
-    for(i = 0; i < 8; i++) {
-        ds18b20_dq_low();
-        ds18b20_delay_us(2);
-        if(dat & 0x01) ds18b20_dq_high(); else ds18b20_dq_low();
-        ds18b20_delay_us(60);
-        ds18b20_dq_high();
-        ds18b20_delay_us(2);
+    for(j = 0; j < 8; j++) {
+        if(dat & 0x01) {
+            /* 写1: 拉低2μs → 释放60μs */
+            ds18b20_dq_low(); ds18b20_delay_us(2);
+            ds18b20_dq_high(); ds18b20_delay_us(60);
+        } else {
+            /* 写0: 拉低60μs → 释放2μs */
+            ds18b20_dq_low(); ds18b20_delay_us(60);
+            ds18b20_dq_high(); ds18b20_delay_us(2);
+        }
         dat >>= 1;
     }
 }
 
+/* 读一个位 */
+static uint8_t ds18b20_read_bit(void)
+{
+    uint8_t bit;
+    ds18b20_pin_out();
+    ds18b20_dq_low(); ds18b20_delay_us(2);
+    ds18b20_dq_high();
+    ds18b20_pin_in();           /* ⭐ 切输入再采样 */
+    ds18b20_delay_us(12);       /* 等待数据稳定 */
+    bit = ds18b20_dq_read();
+    ds18b20_delay_us(50);       /* 完成时隙 */
+    return bit;
+}
+
+/* 读一个字节 (MSB first) */
 static uint8_t ds18b20_read_byte(void)
 {
     uint8_t i, dat = 0;
     for(i = 0; i < 8; i++) {
-        ds18b20_pin_out();
-        ds18b20_dq_low();
-        ds18b20_delay_us(2);
-        ds18b20_dq_high();
-        ds18b20_delay_us(2);
-        ds18b20_pin_in();
-        if(ds18b20_dq_read()) dat |= (1 << i);
-        ds18b20_delay_us(60);
+        dat = (ds18b20_read_bit() << 7) | (dat >> 1);
     }
     return dat;
+}
+
+/* 启动温度转换 */
+static void ds18b20_start(void)
+{
+    ds18b20_reset();
+    ds18b20_write_byte(0xCC);  /* Skip ROM */
+    ds18b20_write_byte(0x44);  /* Convert T */
 }
 
 static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
@@ -102,16 +130,17 @@ static uint8_t ds18b20_read_temp_raw(int16_t *temp_out)
     uint8_t sp[9];
     uint8_t i;
 
-    if(ds18b20_reset()) return 1;
-    ds18b20_write_byte(0xCC);
-    ds18b20_write_byte(0x44);
-    rt_thread_mdelay(750);
+    /* Step 1: 启动转换 */
+    ds18b20_start();
+    rt_thread_mdelay(750);      /* 12bit 转换需 ~750ms */
 
+    /* Step 2: 读取 scratchpad */
     if(ds18b20_reset()) return 1;
-    ds18b20_write_byte(0xCC);
-    ds18b20_write_byte(0xBE);
+    ds18b20_write_byte(0xCC);   /* Skip ROM */
+    ds18b20_write_byte(0xBE);   /* Read Scratchpad */
     for(i = 0; i < 9; i++) sp[i] = ds18b20_read_byte();
 
+    /* Step 3: CRC 校验 */
     if(ds18b20_crc8(sp, 9) != 0) return 2;
 
     *temp_out = (int16_t)((sp[1] << 8) | sp[0]);
