@@ -26,8 +26,10 @@ static uint8_t ds18b20_dq_read(void) { return (GPIOB->IDR & (1U << 13)) ? 1 : 0;
 
 static void ds18b20_delay_us(uint32_t us)
 {
-    volatile uint32_t n = us * 72 / 4;
-    while(n--);
+    uint32_t n = us * 18;  /* 72MHz / 4 = 18 loops per us */
+    while(n--) {
+        __asm volatile("nop");
+    }
 }
 
 /* 复位 + 检测存在脉冲 */
@@ -73,26 +75,18 @@ static void ds18b20_write_byte(uint8_t dat)
     }
 }
 
-/* 读一个位 */
-static uint8_t ds18b20_read_bit(void)
-{
-    uint8_t bit;
-    ds18b20_pin_out();
-    ds18b20_dq_low(); ds18b20_delay_us(2);
-    ds18b20_dq_high();
-    ds18b20_pin_in();           /* ⭐ 切输入再采样 */
-    ds18b20_delay_us(12);       /* 等待数据稳定 */
-    bit = ds18b20_dq_read();
-    ds18b20_delay_us(50);       /* 完成时隙 */
-    return bit;
-}
-
-/* 读一个字节 (MSB first) */
+/* 读一个字节 (内联位操作，消除函数调用时序偏差) */
 static uint8_t ds18b20_read_byte(void)
 {
     uint8_t i, dat = 0;
     for(i = 0; i < 8; i++) {
-        dat = (ds18b20_read_bit() << 7) | (dat >> 1);
+        ds18b20_pin_out();
+        ds18b20_dq_low(); ds18b20_delay_us(2);
+        ds18b20_dq_high();
+        ds18b20_pin_in();
+        ds18b20_delay_us(12);      /* 等待传感器驱动总线 */
+        dat = (ds18b20_dq_read() << 7) | (dat >> 1);
+        ds18b20_delay_us(50);      /* 完成时隙 */
     }
     return dat;
 }
