@@ -1,165 +1,140 @@
+/**
+ * @file    app_sensor.c
+ * @brief   传感器采集模块 (DS18B20 + ADC)
+ *
+ *  DS18B20 驱动移植自 ds18b20-latest (RT-Thread 官方组件)
+ *  使用 rt_pin_* 和 rt_hw_us_delay 保证时序精度
+ */
+
 #include "app_data.h"
 #include "app_sensor.h"
+#include "rtdevice.h"
 #include "stm32f1xx.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <finsh.h>
 
-/* ========== DS18B20 1-Wire (PB13) ========== */
+/* ========== DS18B20 (RT-Thread pin API) ========== */
 
-static void ds18b20_pin_out(void)
+#define DS18B20_PIN  GET_PIN(B, 13)
+
+static void ds18b20_reset(void)
 {
-    GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x3U << 20);  /* 推挽输出 50MHz */
+    rt_pin_mode(DS18B20_PIN, PIN_MODE_OUTPUT);
+    rt_pin_write(DS18B20_PIN, PIN_LOW);
+    rt_hw_us_delay(780);
+    rt_pin_write(DS18B20_PIN, PIN_HIGH);
+    rt_hw_us_delay(40);
 }
 
-static void ds18b20_pin_in(void)
-{
-    GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x8U << 20);  /* 上拉输入 */
-    GPIOB->BSRR = (1U << 13);
-}
-
-static void ds18b20_dq_high(void) { GPIOB->BSRR = (1U << 13); }
-static void ds18b20_dq_low(void)  { GPIOB->BRR  = (1U << 13); }
-static uint8_t ds18b20_dq_read(void) { return (GPIOB->IDR & (1U << 13)) ? 1 : 0; }
-
-static void ds18b20_delay_us(uint32_t us)
-{
-    uint32_t n = us * 18;  /* 72MHz / 4 = 18 loops per us */
-    while(n--) {
-        __asm volatile("nop");
-    }
-}
-
-/* 复位 + 检测存在脉冲 */
-static uint8_t ds18b20_reset(void)
+static uint8_t ds18b20_connect(void)
 {
     uint8_t retry = 0;
+    rt_pin_mode(DS18B20_PIN, PIN_MODE_INPUT);
 
-    ds18b20_pin_out();
-    ds18b20_dq_low();
-    ds18b20_delay_us(750);     /* 拉低 750μs (规格: 480μs min) */
-    ds18b20_dq_high();
-    ds18b20_delay_us(15);       /* 释放 15μs */
-    ds18b20_pin_in();           /* ⭐ 关键: 切输入, 让传感器拉低总线 */
-
-    /* 等待传感器拉低 (presence pulse 开始) */
-    while(ds18b20_dq_read() && retry < 200) { retry++; ds18b20_delay_us(1); }
+    while(rt_pin_read(DS18B20_PIN) && retry < 200) { retry++; rt_hw_us_delay(1); }
     if(retry >= 200) return 1;
 
-    /* 等待传感器释放 (presence pulse 结束) */
     retry = 0;
-    while(!ds18b20_dq_read() && retry < 240) { retry++; ds18b20_delay_us(1); }
+    while(!rt_pin_read(DS18B20_PIN) && retry < 240) { retry++; rt_hw_us_delay(1); }
     if(retry >= 240) return 1;
 
     return 0;
 }
 
-/* 写一个字节 */
-static void ds18b20_write_byte(uint8_t dat)
+static uint8_t ds18b20_read_bit(void)
 {
-    uint8_t j;
-    ds18b20_pin_out();
-    for(j = 0; j < 8; j++) {
-        if(dat & 0x01) {
-            /* 写1: 拉低2μs → 释放60μs */
-            ds18b20_dq_low(); ds18b20_delay_us(2);
-            ds18b20_dq_high(); ds18b20_delay_us(60);
-        } else {
-            /* 写0: 拉低60μs → 释放2μs */
-            ds18b20_dq_low(); ds18b20_delay_us(60);
-            ds18b20_dq_high(); ds18b20_delay_us(2);
-        }
-        dat >>= 1;
-    }
+    uint8_t data;
+    rt_pin_mode(DS18B20_PIN, PIN_MODE_OUTPUT);
+    rt_pin_write(DS18B20_PIN, PIN_LOW);
+    rt_hw_us_delay(2);
+    rt_pin_write(DS18B20_PIN, PIN_HIGH);
+    rt_pin_mode(DS18B20_PIN, PIN_MODE_INPUT);
+    rt_hw_us_delay(5);
+    data = rt_pin_read(DS18B20_PIN) ? 1 : 0;
+    rt_hw_us_delay(50);
+    return data;
 }
 
-/* 读一个字节 (内联位操作，消除函数调用时序偏差) */
 static uint8_t ds18b20_read_byte(void)
 {
-    uint8_t i, dat = 0;
-    for(i = 0; i < 8; i++) {
-        ds18b20_pin_out();
-        ds18b20_dq_low(); ds18b20_delay_us(2);
-        ds18b20_dq_high();
-        ds18b20_pin_in();
-        ds18b20_delay_us(12);      /* 等待传感器驱动总线 */
-        dat = (ds18b20_dq_read() << 7) | (dat >> 1);
-        ds18b20_delay_us(50);      /* 完成时隙 */
+    uint8_t i, j, dat = 0;
+    for(i = 1; i <= 8; i++) {
+        j = ds18b20_read_bit();
+        dat = (j << 7) | (dat >> 1);
     }
     return dat;
 }
 
-/* 启动温度转换 */
+static void ds18b20_write_byte(uint8_t dat)
+{
+    uint8_t j, testb;
+    rt_pin_mode(DS18B20_PIN, PIN_MODE_OUTPUT);
+    for(j = 1; j <= 8; j++) {
+        testb = dat & 0x01;
+        dat >>= 1;
+        if(testb) {
+            rt_pin_write(DS18B20_PIN, PIN_LOW); rt_hw_us_delay(2);
+            rt_pin_write(DS18B20_PIN, PIN_HIGH); rt_hw_us_delay(60);
+        } else {
+            rt_pin_write(DS18B20_PIN, PIN_LOW); rt_hw_us_delay(60);
+            rt_pin_write(DS18B20_PIN, PIN_HIGH); rt_hw_us_delay(2);
+        }
+    }
+}
+
 static void ds18b20_start(void)
 {
     ds18b20_reset();
-    ds18b20_write_byte(0xCC);  /* Skip ROM */
-    ds18b20_write_byte(0x44);  /* Convert T */
-}
-
-static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
-{
-    uint8_t crc = 0;
-    uint8_t i, j;
-    for(i = 0; i < len; i++) {
-        crc ^= data[i];
-        for(j = 0; j < 8; j++) {
-            if(crc & 0x01) crc = (crc >> 1) ^ 0x8C;
-            else crc >>= 1;
-        }
-    }
-    return crc;
+    ds18b20_connect();
+    ds18b20_write_byte(0xCC);
+    ds18b20_write_byte(0x44);
 }
 
 /*
- * 读取温度 (与参考代码一致: 只读2字节)
+ * 读取温度
  * 返回: 0=成功, 1=传感器无响应
+ * temp_x10: 温度值 × 10 (如 253 = 25.3°C)
  */
-static uint8_t ds18b20_read_temp_raw(int16_t *temp_out)
+static uint8_t ds18b20_read_temp_x10(int32_t *temp_x10)
 {
-    uint8_t tl, th;
+    uint8_t TL, TH;
+    int32_t tem;
 
-    /* Step 1: 启动转换 */
     ds18b20_start();
-    rt_thread_mdelay(750);
+    ds18b20_reset();
+    ds18b20_connect();
+    ds18b20_write_byte(0xCC);
+    ds18b20_write_byte(0xBE);
+    TL = ds18b20_read_byte();
+    TH = ds18b20_read_byte();
 
-    /* Step 2: 读取温度 (2字节) */
-    if(ds18b20_reset()) return 1;
-    ds18b20_write_byte(0xCC);   /* Skip ROM */
-    ds18b20_write_byte(0xBE);   /* Read Scratchpad */
-    tl = ds18b20_read_byte();   /* LSB */
-    th = ds18b20_read_byte();   /* MSB */
-
-    *temp_out = (int16_t)((th << 8) | tl);
+    if(TH > 7) {
+        TH = ~TH; TL = ~TL;
+        tem = TH; tem <<= 8; tem += TL;
+        *temp_x10 = -(int32_t)(tem * 0.0625 * 10 + 0.5);
+    } else {
+        tem = TH; tem <<= 8; tem += TL;
+        *temp_x10 = (int32_t)(tem * 0.0625 * 10 + 0.5);
+    }
     return 0;
 }
 
-static float ds18b20_raw_to_float(int16_t raw)
-{
-    int16_t int_part = raw >> 4;
-    uint8_t frac_part = raw & 0x0F;
-    return (float)int_part + (float)frac_part * 0.0625f;
-}
+/* ========== ADC (CMSIS) ========== */
 
-/* ========== ADC (CMSIS 寄存器) ========== */
-
-#define ADC_VREF        3.3f    /* 参考电压 */
-#define ADC_MAX         4095    /* 12bit ADC */
-#define ADC_AVG_SAMPLES 8       /* 多次采样取平均 */
+#define ADC_VREF        3.3f
+#define ADC_MAX         4095
+#define ADC_AVG_SAMPLES 8
 
 static void adc_init(void)
 {
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
-
     GPIOA->CRL &= ~((0xFU << 0) | (0xFU << 4) | (0xFU << 16));
-
     ADC1->CR2 = 0;
     ADC1->CR2 |= ADC_CR2_ADON;
     ADC1->SQR1 = 0;
-    rt_thread_mdelay(10);  /* ADC 稳定 */
+    rt_thread_mdelay(10);
 }
 
 static uint16_t adc_read_raw(uint8_t channel)
@@ -170,7 +145,6 @@ static uint16_t adc_read_raw(uint8_t channel)
     return (uint16_t)(ADC1->DR);
 }
 
-/* 多次采样取平均，滤除噪声 */
 static uint16_t adc_read_avg(uint8_t channel)
 {
     uint32_t sum = 0;
@@ -181,50 +155,26 @@ static uint16_t adc_read_avg(uint8_t channel)
     return (uint16_t)(sum / ADC_AVG_SAMPLES);
 }
 
-/* ADC 值 → 电压 (V) */
 static float adc_to_voltage(uint16_t adc_val)
 {
     return (float)adc_val * ADC_VREF / (float)ADC_MAX;
 }
 
-/*
- * 空气质量: MQ-135
- *   ADC 原始值 → 电压 → 电阻比 Rs/R0 → PPM
- *   简化: 直接用 ADC 值映射为 0~999 的空气质量指数
- *   ADC 高 = 空气差 (电压高 = Rs 低 = 气体浓度高)
- */
 static uint16_t calc_air_quality(uint16_t adc_val)
 {
-    /* 映射: ADC 0~4095 → 0~999 (空气质量指数) */
-    uint16_t aqi = (uint32_t)adc_val * 999 / ADC_MAX;
-    return aqi;
+    return (uint32_t)adc_val * 999 / ADC_MAX;
 }
 
-/*
- * 水位: 模拟水位传感器
- *   传感器输出 0~3.3V 对应 0~100%
- *   线性映射，可根据实际传感器标定量程调整
- */
 static uint8_t calc_water_level(uint16_t adc_val)
 {
-    /* 线性映射: ADC 0~4095 → 0~100% */
     uint8_t level = (uint8_t)((uint32_t)adc_val * 100 / ADC_MAX);
     if(level > 100) level = 100;
     return level;
 }
 
-/*
- * PH 值: 模拟 PH 传感器
- *   标定参数 (需根据实际传感器和缓冲液校准):
- *   - 中性溶液 (PH=7.0) 输出约 1.65V → ADC 2048
- *   - 酸性溶液 (PH=4.0) 输出约 0.825V → ADC 1024
- *   - 碱性溶液 (PH=10.0) 输出约 2.475V → ADC 3072
- *   公式: PH = 7.0 + (ADC - 2048) * 7.0 / 2048
- *         = 7.0 + (V - 1.65) * 7.0 / 1.65
- */
-#define PH_NEUTRAL_ADC  2048    /* 中性 (PH=7.0) 对应 ADC 值 */
-#define PH_SLOPE        7.0f    /* PH 斜率: 每 1.65V 变化 7 个 PH */
-#define PH_RANGE        2048.0f /* ADC 范围 (对应 ±7 PH) */
+#define PH_NEUTRAL_ADC  2048
+#define PH_SLOPE        7.0f
+#define PH_RANGE        2048.0f
 
 static float calc_ph_value(uint16_t adc_val)
 {
@@ -238,31 +188,27 @@ static float calc_ph_value(uint16_t adc_val)
 
 static struct rt_thread sensor_thread;
 static rt_uint8_t sensor_stack[512];
-
-/* 传感器状态标志 */
-uint8_t g_sensor_temp_valid = 0;  /* 1=DS18B20在线且数据有效 */
+uint8_t g_sensor_temp_valid = 0;
 
 static void sensor_thread_entry(void *param)
 {
-    int16_t temp_raw;
+    int32_t temp_x10;
     uint16_t adc_air, adc_water, adc_ph;
 
-    RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
     adc_init();
 
     while(1) {
-        /* DS18B20 温度采集 (CRC校验) */
-        uint8_t ret = ds18b20_read_temp_raw(&temp_raw);
-        if(ret == 0 && temp_raw > (-50 << 4) && temp_raw < (125 << 4)) {
+        /* DS18B20 温度 */
+        if(ds18b20_read_temp_x10(&temp_x10) == 0 && temp_x10 > -500 && temp_x10 < 1250) {
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
-            g_sensor.water_temp = ds18b20_raw_to_float(temp_raw);
+            g_sensor.water_temp = (float)temp_x10 * 0.1f;
             rt_mutex_release(&mutex_data);
             g_sensor_temp_valid = 1;
         } else {
             g_sensor_temp_valid = 0;
         }
 
-        /* ADC 多次采样 + 换算 */
+        /* ADC */
         adc_air   = adc_read_avg(ADC_AIR_CHANNEL);
         adc_water = adc_read_avg(ADC_WATER_CHANNEL);
         adc_ph    = adc_read_avg(ADC_PH_CHANNEL);
@@ -286,12 +232,14 @@ void app_sensor_init(void)
     rt_thread_startup(&sensor_thread);
 }
 
-/* ========== FinSH 调试命令 ========== */
+/* ========== FinSH 命令 ========== */
 
 static void temp(void)
 {
     if(g_sensor_temp_valid)
-        rt_kprintf("Temp: %.2f C\n", g_sensor.water_temp);
+        rt_kprintf("Temp: %d.%d C\n",
+                   (int)g_sensor.water_temp,
+                   ((int)(g_sensor.water_temp * 10)) % 10);
     else
         rt_kprintf("Temp: sensor offline\n");
 }
@@ -308,14 +256,12 @@ static void sensor(void)
 
     rt_kprintf("--- Sensor Data ---\n");
     if(g_sensor_temp_valid) {
-        int t_int = (int)g_sensor.water_temp;
-        int t_frac = (int)(g_sensor.water_temp * 100) % 100;
-        if(t_frac < 0) t_frac = -t_frac;
-        rt_kprintf("Temp:  %d.%02d C (use 'temp' cmd)\n", t_int, t_frac);
+        rt_kprintf("Temp:  %d.%d C\n",
+                   (int)g_sensor.water_temp,
+                   ((int)(g_sensor.water_temp * 10)) % 10);
     } else {
         rt_kprintf("Temp:  [offline]\n");
     }
-    /* 温度用单独的 temp 命令查看 */
     rt_kprintf("Air:   AQI=%d  ADC=%d %dmV\n", g_sensor.air_quality, adc_air, mv_air);
     rt_kprintf("Water: %d%%     ADC=%d %dmV\n", g_sensor.water_level, adc_water, mv_water);
     rt_kprintf("PH:    %d.%02d    ADC=%d %dmV\n",
