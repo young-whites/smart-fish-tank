@@ -1,36 +1,28 @@
 /**
  * @file    app_display.c
- * @brief   OLED 显示模块 (主页汉字+阈值/手动页纯ASCII，节省RAM)
+ * @brief   OLED 显示模块 (局部刷新优化)
  *
- *  OLED: 128x64 = 8 pages, 每 page = 8px 高
- *  主页面: 16x16 汉字标签 + 6x12 ASCII (混合行)
- *  阈值/手动页: 纯 6x12 ASCII (每页 8 行, 最多 8 行内容)
- *
- *  页面导航:
- *    KEY1 → 切换主页面 (主页面→阈值设置→手动控制→主页面)
- *    KEY2 → 切换子页 (Page 1/2)
- *    KEY3 → 阈值设置页: 当前项 +1  /  手动控制页: 开关切换
- *    KEY4 → 阈值设置页: 当前项 -1
- *    KEY5 → 阈值/手动页: 切换当前编辑项
+ *  刷新策略:
+ *    - 页面切换: oled_clear + 全量绘制 + oled_refresh (完整刷新)
+ *    - 定时更新: 仅清除数据区域 + 局部绘制 + oled_refresh (无闪烁)
+ *    - 无效按键: 不刷新
  */
 
 #include "app_display.h"
 #include "app_data.h"
 #include "app_key.h"
 #include "drv_oled.h"
+#include "font_lib.h"
 #include <rtthread.h>
 #include <stdint.h>
 #include <stdio.h>
-
-/* 仅主页使用汉字库 */
-#include "font_lib.h"
 
 /* ===================== 页面状态 ===================== */
 static uint8_t main_page   = 0;  /* 0=主页面, 1=阈值设置, 2=手动控制 */
 static uint8_t sub_page    = 0;  /* 0=第一页, 1=第二页 */
 static uint8_t edit_cursor = 0;  /* 阈值/手动页当前编辑项 */
+static uint8_t page_changed = 1; /* 1=需要完整刷新, 0=仅局部刷新 */
 
-/* 主页面最大子页数 */
 static uint8_t get_max_subs(void)
 {
     switch (main_page) {
@@ -41,7 +33,20 @@ static uint8_t get_max_subs(void)
     }
 }
 
-/* ===================== 页码指示 ===================== */
+/* ===================== 工具函数 ===================== */
+
+/* 清除 OLED 缓冲区中指定 page 范围的指定列区间 */
+static void clear_buf_region(uint8_t page_start, uint8_t page_end,
+                              uint8_t col_start, uint8_t col_end)
+{
+    uint8_t p, c;
+    for (p = page_start; p <= page_end && p < OLED_PAGES; p++) {
+        for (c = col_start; c <= col_end && c < OLED_WIDTH; c++) {
+            oled_buf[p * OLED_WIDTH + c] = 0;
+        }
+    }
+}
+
 static void draw_page_indicator(void)
 {
     char buf[8];
@@ -50,31 +55,39 @@ static void draw_page_indicator(void)
 }
 
 /* ===================== 主页面 (混合汉字+ASCII) ===================== */
+/* 主页每行: 汉字 label 占 col 0~31, 数据占 col 32~127 */
 
-static void show_main_page_0(void)
+static void draw_main_p0_data(void)
 {
     char buf[24];
+    uint8_t p;
+
+    /* 清除每行的数据区域 (col 32~127), 保留汉字 label */
+    for (p = 0; p < 8; p++) clear_buf_region(p, p, 32, 127);
 
     rt_snprintf(buf, sizeof(buf), "%.1fC", g_sensor.water_temp);
-    oled_draw_mix_line(0, "温度", buf);
+    oled_draw_string(32, 0, buf);
 
     rt_snprintf(buf, sizeof(buf), "%d", g_sensor.air_quality);
-    oled_draw_mix_line(2, "空气", buf);
+    oled_draw_string(32, 2, buf);
 
     rt_snprintf(buf, sizeof(buf), "%d%%", g_sensor.water_level);
-    oled_draw_mix_line(4, "水位", buf);
+    oled_draw_string(32, 4, buf);
 
     rt_snprintf(buf, sizeof(buf), "%.1f", g_sensor.ph_value);
-    oled_draw_mix_line(6, "PH值", buf);
+    oled_draw_string(32, 6, buf);
+
+    draw_page_indicator();
 }
 
-static void show_main_page_1(void)
+static void draw_main_p1_data(void)
 {
     char buf[24];
-    const char *mode_str;
+    uint8_t p;
 
-    mode_str = (g_sensor.run_mode == MODE_AUTO) ? "Auto" : "Manu";
-    oled_draw_mix_line(0, "模式", mode_str);
+    for (p = 0; p < 8; p++) clear_buf_region(p, p, 32, 127);
+
+    oled_draw_string(32, 0, (g_sensor.run_mode == MODE_AUTO) ? "Auto" : "Manu");
 
     if (g_sensor.feed_countdown > 0)
         rt_snprintf(buf, sizeof(buf), "%02d:%02d",
@@ -82,42 +95,63 @@ static void show_main_page_1(void)
                     (int)(g_sensor.feed_countdown % 60));
     else
         rt_snprintf(buf, sizeof(buf), "--:--");
-    oled_draw_mix_line(2, "喂食", buf);
+    oled_draw_string(32, 2, buf);
 
-    oled_draw_mix_line(4, "WiFi", "W-");
+    oled_draw_string(32, 4, "W-");
 
     rt_snprintf(buf, sizeof(buf), "%s %s",
                 g_status.relay_heat ? "ON" : "OF",
                 g_status.relay_oxygen ? "ON" : "OF");
-    oled_draw_mix_line(6, "热氧", buf);
+    oled_draw_string(32, 6, buf);
+
+    draw_page_indicator();
 }
 
+/* 完整绘制主页面 (页面切换时调用) */
 static void show_main_page(void)
 {
     rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
     oled_clear();
 
-    if (sub_page == 0)
-        show_main_page_0();
-    else
-        show_main_page_1();
+    if (sub_page == 0) {
+        oled_draw_mix_line(0, "温度", "");
+        oled_draw_mix_line(2, "空气", "");
+        oled_draw_mix_line(4, "水位", "");
+        oled_draw_mix_line(6, "PH值", "");
+        draw_main_p0_data();
+    } else {
+        oled_draw_mix_line(0, "模式", "");
+        oled_draw_mix_line(2, "喂食", "");
+        oled_draw_mix_line(4, "WiFi", "");
+        oled_draw_mix_line(6, "热氧", "");
+        draw_main_p1_data();
+    }
 
-    draw_page_indicator();
+    oled_refresh();
+    rt_mutex_release(&mutex_oled);
+}
+
+/* 局部更新主页面 (定时刷新时调用, 汉字不动) */
+static void update_main_page(void)
+{
+    rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
+
+    if (sub_page == 0)
+        draw_main_p0_data();
+    else
+        draw_main_p1_data();
+
     oled_refresh();
     rt_mutex_release(&mutex_oled);
 }
 
 /* ===================== 阈值设置页面 (纯ASCII) ===================== */
 
-/*
- * 阈值页布局: 标签 固定8字符 | 右对齐数值 | 单位 | 光标
- *   TempLow:   20.0C <<
- *   TempUp:    30.0C
- *   AirMax:      500  <<
- */
-static void show_threshold_page_0(void)
+static void draw_threshold_p0_data(void)
 {
     char buf[24];
+
+    clear_buf_region(0, 3, 0, 127);
 
     oled_draw_string(0, 0, "-- Threshold Set --");
 
@@ -135,11 +169,15 @@ static void show_threshold_page_0(void)
                 g_threshold.air_quality_max,
                 (edit_cursor == 2) ? "<<" : "");
     oled_draw_string(0, 3, buf);
+
+    draw_page_indicator();
 }
 
-static void show_threshold_page_1(void)
+static void draw_threshold_p1_data(void)
 {
     char buf[24];
+
+    clear_buf_region(0, 3, 0, 127);
 
     rt_snprintf(buf, sizeof(buf), "PH Low: %5.1f   %s",
                 g_threshold.ph_lower,
@@ -160,6 +198,8 @@ static void show_threshold_page_1(void)
                 g_threshold.water_level_max,
                 (edit_cursor == 6) ? "<<" : "");
     oled_draw_string(0, 3, buf);
+
+    draw_page_indicator();
 }
 
 static void show_threshold_page(void)
@@ -168,11 +208,23 @@ static void show_threshold_page(void)
     oled_clear();
 
     if (sub_page == 0)
-        show_threshold_page_0();
+        draw_threshold_p0_data();
     else
-        show_threshold_page_1();
+        draw_threshold_p1_data();
 
-    draw_page_indicator();
+    oled_refresh();
+    rt_mutex_release(&mutex_oled);
+}
+
+static void update_threshold_page(void)
+{
+    rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
+
+    if (sub_page == 0)
+        draw_threshold_p0_data();
+    else
+        draw_threshold_p1_data();
+
     oled_refresh();
     rt_mutex_release(&mutex_oled);
 }
@@ -189,20 +241,17 @@ static uint8_t *manual_status[] = {
 };
 #define MANUAL_ITEMS  6
 
-static void show_manual_page(void)
+static void draw_manual_data(void)
 {
     char buf[24];
     uint8_t i;
 
-    rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
-    oled_clear();
+    clear_buf_region(0, 6, 0, 127);
 
     oled_draw_string(0, 0, "-- Manual Control --");
 
-    for (i = 0; i < MANUAL_ITEMS && i < 6; i++) {
+    for (i = 0; i < MANUAL_ITEMS; i++) {
         uint8_t row = 1 + i;
-        if (row > 6) break;
-
         char mark = (i == edit_cursor) ? '>' : ' ';
         rt_snprintf(buf, sizeof(buf), "%c %s: %3s %s",
                     mark, manual_labels[i],
@@ -212,32 +261,48 @@ static void show_manual_page(void)
     }
 
     draw_page_indicator();
+}
+
+static void show_manual_page(void)
+{
+    rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
+    oled_clear();
+    draw_manual_data();
+    oled_refresh();
+    rt_mutex_release(&mutex_oled);
+}
+
+static void update_manual_page(void)
+{
+    rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
+    draw_manual_data();
     oled_refresh();
     rt_mutex_release(&mutex_oled);
 }
 
 /* ===================== 按键处理 ===================== */
 
-/* @return 1=状态变更需刷新, 0=无效按键不刷新 */
 static int handle_key_event(uint8_t key)
 {
     switch (key) {
-    case 1: /* KEY1: 切换主页面 (所有页面通用) */
+    case 1: /* KEY1: 切换主页面 */
         main_page++;
         if (main_page > 2) main_page = 0;
         sub_page = 0;
         edit_cursor = 0;
+        page_changed = 1;
         return 1;
 
-    case 2: /* KEY2: 切换子页 (仅主页和阈值页) */
+    case 2: /* KEY2: 切换子页 */
         if (main_page == 0 || main_page == 1) {
             sub_page++;
             if (sub_page >= get_max_subs()) sub_page = 0;
+            page_changed = 1;
             return 1;
         }
         return 0;
 
-    case 3: /* KEY3: 阈值+1 或 手动开关切换 */
+    case 3: /* KEY3: 阈值+1 / 手动开关 */
         if (main_page == 1) {
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
             switch (edit_cursor) {
@@ -259,7 +324,7 @@ static int handle_key_event(uint8_t key)
         }
         return 0;
 
-    case 4: /* KEY4: 阈值-1 (仅阈值页) */
+    case 4: /* KEY4: 阈值-1 */
         if (main_page == 1) {
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
             switch (edit_cursor) {
@@ -276,7 +341,7 @@ static int handle_key_event(uint8_t key)
         }
         return 0;
 
-    case 5: /* KEY5: 切换编辑项 (仅阈值页和手动页) */
+    case 5: /* KEY5: 切换编辑项 */
         if (main_page == 1) {
             edit_cursor++;
             if (edit_cursor >= 7) edit_cursor = 0;
@@ -293,15 +358,23 @@ static int handle_key_event(uint8_t key)
     }
 }
 
-/* ===================== 显示刷新 ===================== */
+/* ===================== 显示调度 ===================== */
 
-static void refresh_display(void)
+static void full_refresh(void)
 {
     switch (main_page) {
         case 0: show_main_page();     break;
         case 1: show_threshold_page(); break;
         case 2: show_manual_page();    break;
-        default: show_main_page();     break;
+    }
+}
+
+static void partial_refresh(void)
+{
+    switch (main_page) {
+        case 0: update_main_page();     break;
+        case 1: update_threshold_page(); break;
+        case 2: update_manual_page();    break;
     }
 }
 
@@ -315,11 +388,10 @@ static void display_thread_entry(void *param)
     oled_init();
     rt_thread_mdelay(500);
 
-    refresh_display();
+    full_refresh();
 
     while (1) {
         rt_err_t result = rt_sem_take(&sem_key, rt_tick_from_millisecond(1000));
-
         int need_refresh = 0;
 
         if (result == RT_EOK) {
@@ -327,11 +399,16 @@ static void display_thread_entry(void *param)
             g_key_event = 0;
             need_refresh = handle_key_event(key);
         } else {
-            need_refresh = 1;
+            need_refresh = 1; /* 超时: 定时刷新数据 */
         }
 
         if (need_refresh) {
-            refresh_display();
+            if (page_changed) {
+                page_changed = 0;
+                full_refresh();    /* 页面切换: 完整清除+刷新 */
+            } else {
+                partial_refresh(); /* 定时/编辑: 仅数据区域刷新 */
+            }
         }
     }
 }
