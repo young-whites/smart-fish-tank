@@ -112,46 +112,47 @@ static void show_main_page(void)
 static void show_threshold_page_0(void)
 {
     char buf[24];
-    char cur;
 
     oled_draw_string(0, 0, "-- Threshold Set --");
 
-    cur = (edit_cursor == 0) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "TempLow: %.1fC%c", g_threshold.temp_lower, cur);
+    rt_snprintf(buf, sizeof(buf), "TempLow: %.1fC%s",
+                g_threshold.temp_lower,
+                (edit_cursor == 0) ? "<<" : "");
+    oled_draw_string(0, 1, buf);
+
+    rt_snprintf(buf, sizeof(buf), "TempUp:  %.1fC%s",
+                g_threshold.temp_upper,
+                (edit_cursor == 1) ? "<<" : "");
     oled_draw_string(0, 2, buf);
 
-    cur = (edit_cursor == 1) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "TempUp:  %.1fC%c", g_threshold.temp_upper, cur);
+    rt_snprintf(buf, sizeof(buf), "AirMax:  %d%s",
+                g_threshold.air_quality_max,
+                (edit_cursor == 2) ? "<<" : "");
     oled_draw_string(0, 3, buf);
-
-    cur = (edit_cursor == 2) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "AirMax:  %d%c", g_threshold.air_quality_max, cur);
-    oled_draw_string(0, 4, buf);
-
-    cur = (edit_cursor == 3) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "PH Low:  %.1f%c", g_threshold.ph_lower, cur);
-    oled_draw_string(0, 5, buf);
 }
 
 static void show_threshold_page_1(void)
 {
     char buf[24];
-    char cur;
 
-    cur = (edit_cursor == 3) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "PH Low:  %.1f%c", g_threshold.ph_lower, cur);
+    rt_snprintf(buf, sizeof(buf), "PH Low:  %.1f%s",
+                g_threshold.ph_lower,
+                (edit_cursor == 3) ? "<<" : "");
     oled_draw_string(0, 0, buf);
 
-    cur = (edit_cursor == 4) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "PH Up:   %.1f%c", g_threshold.ph_upper, cur);
+    rt_snprintf(buf, sizeof(buf), "PH Up:   %.1f%s",
+                g_threshold.ph_upper,
+                (edit_cursor == 4) ? "<<" : "");
     oled_draw_string(0, 1, buf);
 
-    cur = (edit_cursor == 5) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "WL Min:  %d%%%c", g_threshold.water_level_min, cur);
+    rt_snprintf(buf, sizeof(buf), "WL Min:  %d%%%s",
+                g_threshold.water_level_min,
+                (edit_cursor == 5) ? "<<" : "");
     oled_draw_string(0, 2, buf);
 
-    cur = (edit_cursor == 6) ? '<' : ' ';
-    rt_snprintf(buf, sizeof(buf), "WL Max:  %d%%%c", g_threshold.water_level_max, cur);
+    rt_snprintf(buf, sizeof(buf), "WL Max:  %d%%%s",
+                g_threshold.water_level_max,
+                (edit_cursor == 6) ? "<<" : "");
     oled_draw_string(0, 3, buf);
 }
 
