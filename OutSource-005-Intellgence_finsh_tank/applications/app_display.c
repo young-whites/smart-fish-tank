@@ -13,7 +13,6 @@
 #include "app_key.h"
 #include "drv_oled.h"
 #include "app_sensor.h"
-#include "font_lib.h"
 #include <rtthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -49,24 +48,27 @@ static void draw_page_indicator(void)
 static void draw_main_p0_data(void)
 {
     char buf[24];
-    uint8_t p;
 
-    for (p = 0; p < 8; p++) oled_clear_region(p, p, 32, 127);
+    oled_clear_region(0, 7, 0, 127);
 
     if(g_sensor_temp_valid)
-        rt_snprintf(buf, sizeof(buf), "%.2fC", g_sensor.water_temp);
+        rt_snprintf(buf, sizeof(buf), "Temp:  %d.%02d C",
+                    (int)g_sensor.water_temp,
+                    ((int)(g_sensor.water_temp * 100)) % 100);
     else
-        rt_snprintf(buf, sizeof(buf), "--.-C");
-    oled_draw_string(32, 0, buf);
+        rt_snprintf(buf, sizeof(buf), "Temp:  --.- C");
+    oled_draw_string(0, 0, buf);
 
-    rt_snprintf(buf, sizeof(buf), "%d", g_sensor.air_quality);
-    oled_draw_string(32, 2, buf);
+    rt_snprintf(buf, sizeof(buf), "Air:   %d", g_sensor.air_quality);
+    oled_draw_string(0, 1, buf);
 
-    rt_snprintf(buf, sizeof(buf), "%d%%", g_sensor.water_level);
-    oled_draw_string(32, 4, buf);
+    rt_snprintf(buf, sizeof(buf), "Water: %d%%", g_sensor.water_level);
+    oled_draw_string(0, 2, buf);
 
-    rt_snprintf(buf, sizeof(buf), "%.1f", g_sensor.ph_value);
-    oled_draw_string(32, 6, buf);
+    rt_snprintf(buf, sizeof(buf), "PH:    %d.%02d",
+                (int)g_sensor.ph_value,
+                ((int)(g_sensor.ph_value * 100)) % 100);
+    oled_draw_string(0, 3, buf);
 
     draw_page_indicator();
 }
@@ -74,26 +76,25 @@ static void draw_main_p0_data(void)
 static void draw_main_p1_data(void)
 {
     char buf[24];
-    uint8_t p;
 
-    for (p = 0; p < 8; p++) oled_clear_region(p, p, 32, 127);
+    oled_clear_region(0, 7, 0, 127);
 
-    oled_draw_string(32, 0, (g_sensor.run_mode == MODE_AUTO) ? "Auto" : "Manu");
+    oled_draw_string(0, 0, (g_sensor.run_mode == MODE_AUTO) ? "Mode:  Auto" : "Mode:  Manu");
 
     if (g_sensor.feed_countdown > 0)
-        rt_snprintf(buf, sizeof(buf), "%02d:%02d",
+        rt_snprintf(buf, sizeof(buf), "Feed:  %02d:%02d",
                     (int)(g_sensor.feed_countdown / 60),
                     (int)(g_sensor.feed_countdown % 60));
     else
-        rt_snprintf(buf, sizeof(buf), "--:--");
-    oled_draw_string(32, 2, buf);
+        rt_snprintf(buf, sizeof(buf), "Feed:  --:--");
+    oled_draw_string(0, 1, buf);
 
-    oled_draw_string(32, 4, "W-");
+    oled_draw_string(0, 2, "WiFi:  W-");
 
-    rt_snprintf(buf, sizeof(buf), "%s %s",
+    rt_snprintf(buf, sizeof(buf), "Heat:%s  O2:%s",
                 g_status.relay_heat ? "ON" : "OF",
                 g_status.relay_oxygen ? "ON" : "OF");
-    oled_draw_string(32, 6, buf);
+    oled_draw_string(0, 3, buf);
 
     draw_page_indicator();
 }
@@ -104,19 +105,10 @@ static void show_main_page(void)
     rt_mutex_take(&mutex_oled, RT_WAITING_FOREVER);
     oled_clear();
 
-    if (sub_page == 0) {
-        oled_draw_mix_line(0, "温度", "");
-        oled_draw_mix_line(2, "空气", "");
-        oled_draw_mix_line(4, "水位", "");
-        oled_draw_mix_line(6, "PH值", "");
+    if (sub_page == 0)
         draw_main_p0_data();
-    } else {
-        oled_draw_mix_line(0, "模式", "");
-        oled_draw_mix_line(2, "喂食", "");
-        oled_draw_mix_line(4, "WiFi", "");
-        oled_draw_mix_line(6, "热氧", "");
+    else
         draw_main_p1_data();
-    }
 
     oled_refresh();
     rt_mutex_release(&mutex_oled);
