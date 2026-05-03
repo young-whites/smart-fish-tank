@@ -15,18 +15,18 @@
 
 /* ========== DS18B20 1-Wire (PB13, CMSIS) ========== */
 
-/* PB13 引脚操作 */
+/* PB1 引脚操作 */
 static void ds18b20_pin_out(void)
 {
-    GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x3U << 20);  /* 推挽输出 50MHz */
+    GPIOB->CRL &= ~(0xFU << 4);
+    GPIOB->CRL |=  (0x3U << 4);  /* 推挽输出 50MHz */
 }
 
 static void ds18b20_pin_in(void)
 {
-    GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x8U << 20);  /* 上拉输入 */
-    GPIOB->BSRR = (1U << 13);
+    GPIOB->CRL &= ~(0xFU << 4);
+    GPIOB->CRL |=  (0x8U << 4);  /* 上拉输入 */
+    GPIOB->BSRR = (1U << 1);
 }
 
 /* 基于 CPU 主频的精确微秒延时 (不依赖SysTick，不受时钟切换影响) */
@@ -42,9 +42,9 @@ static void ds18b20_delay_us(uint32_t us)
 static void ds18b20_reset(void)
 {
     ds18b20_pin_out();
-    GPIOB->BRR = (1U << 13);         /* 拉低 */
+    GPIOB->BRR = (1U << 1);         /* 拉低 */
     ds18b20_delay_us(780);            /* 780μs (480~960) */
-    GPIOB->BSRR = (1U << 13);        /* 释放 */
+    GPIOB->BSRR = (1U << 1);        /* 释放 */
     ds18b20_delay_us(40);             /* 40μs (15~60) */
 }
 
@@ -54,11 +54,11 @@ static uint8_t ds18b20_connect(void)
     uint8_t retry = 0;
     ds18b20_pin_in();
 
-    while((GPIOB->IDR & (1U << 13)) && retry < 200) { retry++; ds18b20_delay_us(1); }
+    while((GPIOB->IDR & (1U << 1)) && retry < 200) { retry++; ds18b20_delay_us(1); }
     if(retry >= 200) return 1;
 
     retry = 0;
-    while(!(GPIOB->IDR & (1U << 13)) && retry < 240) { retry++; ds18b20_delay_us(1); }
+    while(!(GPIOB->IDR & (1U << 1)) && retry < 240) { retry++; ds18b20_delay_us(1); }
     if(retry >= 240) return 1;
 
     return 0;
@@ -69,12 +69,12 @@ static uint8_t ds18b20_read_bit(void)
 {
     uint8_t data;
     ds18b20_pin_out();
-    GPIOB->BRR = (1U << 13);
+    GPIOB->BRR = (1U << 1);
     ds18b20_delay_us(2);
-    GPIOB->BSRR = (1U << 13);
+    GPIOB->BSRR = (1U << 1);
     ds18b20_pin_in();
     ds18b20_delay_us(5);
-    data = (GPIOB->IDR & (1U << 13)) ? 1 : 0;
+    data = (GPIOB->IDR & (1U << 1)) ? 1 : 0;
     ds18b20_delay_us(50);
     return data;
 }
@@ -99,11 +99,11 @@ static void ds18b20_write_byte(uint8_t dat)
         testb = dat & 0x01;
         dat >>= 1;
         if(testb) {
-            GPIOB->BRR = (1U << 13); ds18b20_delay_us(2);
-            GPIOB->BSRR = (1U << 13); ds18b20_delay_us(60);
+            GPIOB->BRR = (1U << 1); ds18b20_delay_us(2);
+            GPIOB->BSRR = (1U << 1); ds18b20_delay_us(60);
         } else {
-            GPIOB->BRR = (1U << 13); ds18b20_delay_us(60);
-            GPIOB->BSRR = (1U << 13); ds18b20_delay_us(2);
+            GPIOB->BRR = (1U << 1); ds18b20_delay_us(60);
+            GPIOB->BSRR = (1U << 1); ds18b20_delay_us(2);
         }
     }
 }

@@ -5,46 +5,46 @@
 
 uint8_t g_key_event = 0;
 
-/* KEY1=PA8, KEY2=PB3, KEY3=PB4, KEY4=PB8, KEY5=PB1 */
+/* KEY1=PA6, KEY2=PA7, KEY3=PB0, KEY4=PB10, KEY5=PB11 */
 /* 所有按键: 上拉输入, 低电平有效 */
 
 static void key_gpio_init(void)
 {
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN;
 
-    /* PA8: 上拉输入 -> CRH[3:0] */
-    GPIOA->CRH &= ~(0xFU << 0);
-    GPIOA->CRH |=  (0x8U << 0);  /* MODE=00, CNF=10 */
-    GPIOA->BSRR = (1U << 8);     /* 上拉 */
+    /* PA6: 上拉输入 -> CRL[27:24] */
+    GPIOA->CRL &= ~(0xFU << 24);
+    GPIOA->CRL |=  (0x8U << 24);
+    GPIOA->BSRR = (1U << 6);
 
-    /* PB1: 上拉输入 -> CRL[7:4] */
-    GPIOB->CRL &= ~(0xFU << 4);
-    GPIOB->CRL |=  (0x8U << 4);
-    GPIOB->BSRR = (1U << 1);
+    /* PA7: 上拉输入 -> CRL[31:28] */
+    GPIOA->CRL &= ~(0xFU << 28);
+    GPIOA->CRL |=  (0x8U << 28);
+    GPIOA->BSRR = (1U << 7);
 
-    /* PB3: 上拉输入 -> CRL[15:12] */
-    GPIOB->CRL &= ~(0xFU << 12);
-    GPIOB->CRL |=  (0x8U << 12);
-    GPIOB->BSRR = (1U << 3);
+    /* PB0: 上拉输入 -> CRL[3:0] */
+    GPIOB->CRL &= ~(0xFU << 0);
+    GPIOB->CRL |=  (0x8U << 0);
+    GPIOB->BSRR = (1U << 0);
 
-    /* PB4: 上拉输入 -> CRL[19:16] */
-    GPIOB->CRL &= ~(0xFU << 16);
-    GPIOB->CRL |=  (0x8U << 16);
-    GPIOB->BSRR = (1U << 4);
+    /* PB10: 上拉输入 -> CRH[7:4] */
+    GPIOB->CRH &= ~(0xFU << 4);
+    GPIOB->CRH |=  (0x8U << 4);
+    GPIOB->BSRR = (1U << 10);
 
-    /* PB8: 上拉输入 -> CRH[3:0] */
-    GPIOB->CRH &= ~(0xFU << 0);
-    GPIOB->CRH |=  (0x8U << 0);
-    GPIOB->BSRR = (1U << 8);
+    /* PB11: 上拉输入 -> CRH[11:8] */
+    GPIOB->CRH &= ~(0xFU << 8);
+    GPIOB->CRH |=  (0x8U << 8);
+    GPIOB->BSRR = (1U << 11);
 }
 
 static uint8_t key_scan(void)
 {
-    if(!(GPIOA->IDR & (1U << 8))) return 1;   /* KEY1 */
-    if(!(GPIOB->IDR & (1U << 3))) return 2;   /* KEY2 */
-    if(!(GPIOB->IDR & (1U << 4))) return 3;   /* KEY3 */
-    if(!(GPIOB->IDR & (1U << 8))) return 4;   /* KEY4 */
-    if(!(GPIOB->IDR & (1U << 1))) return 5;   /* KEY5 */
+    if(!(GPIOA->IDR & (1U << 6)))  return 1;   /* KEY1=PA6 */
+    if(!(GPIOA->IDR & (1U << 7)))  return 2;   /* KEY2=PA7 */
+    if(!(GPIOB->IDR & (1U << 0)))  return 3;   /* KEY3=PB0 */
+    if(!(GPIOB->IDR & (1U << 10))) return 4;   /* KEY4=PB10 */
+    if(!(GPIOB->IDR & (1U << 11))) return 5;   /* KEY5=PB11 */
     return 0;
 }
 
