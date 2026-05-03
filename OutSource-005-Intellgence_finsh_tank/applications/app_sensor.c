@@ -293,3 +293,12 @@ static void sensor(void)
     rt_kprintf("Mode:  %s\n", g_sensor.run_mode == MODE_AUTO ? "Auto" : "Manual");
 }
 MSH_CMD_EXPORT(sensor, show all sensor data);
+
+static void clk(void)
+{
+    rt_kprintf("HCLK:  %d Hz\n", HAL_RCC_GetHCLKFreq());
+    rt_kprintf("PCLK1: %d Hz\n", HAL_RCC_GetPCLK1Freq());
+    rt_kprintf("PCLK2: %d Hz\n", HAL_RCC_GetPCLK2Freq());
+    rt_kprintf("SYSCLK:%d Hz\n", HAL_RCC_GetSysClockFreq());
+}
+MSH_CMD_EXPORT(clk, show system clock frequencies);
