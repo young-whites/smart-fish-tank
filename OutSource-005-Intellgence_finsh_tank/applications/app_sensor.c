@@ -310,14 +310,29 @@ MSH_CMD_EXPORT(temp, show DS18B20 temperature);
 
 static void sensor(void)
 {
+    uint16_t adc_air   = adc_read_avg(ADC_AIR_CHANNEL);
+    uint16_t adc_water = adc_read_avg(ADC_WATER_CHANNEL);
+    uint16_t adc_ph    = adc_read_avg(ADC_PH_CHANNEL);
+    int mv_air   = (int)(adc_to_voltage(adc_air) * 1000);
+    int mv_water = (int)(adc_to_voltage(adc_water) * 1000);
+    int mv_ph    = (int)(adc_to_voltage(adc_ph) * 1000);
+
     rt_kprintf("--- Sensor Data ---\n");
-    if(g_sensor_temp_valid)
-        rt_kprintf("Temp:  %.2f C\n", g_sensor.water_temp);
-    else
-        rt_kprintf("Temp:  --.- (offline)\n");
-    rt_kprintf("Air:   %d\n", g_sensor.air_quality);
-    rt_kprintf("Water: %d%%\n", g_sensor.water_level);
-    rt_kprintf("PH:    %.2f\n", g_sensor.ph_value);
+    if(g_sensor_temp_valid) {
+        int t_int = (int)g_sensor.water_temp;
+        int t_frac = (int)(g_sensor.water_temp * 100) % 100;
+        if(t_frac < 0) t_frac = -t_frac;
+        rt_kprintf("Temp:  %d.%02d C (use 'temp' cmd)\n", t_int, t_frac);
+    } else {
+        rt_kprintf("Temp:  [offline]\n");
+    }
+    /* 温度用单独的 temp 命令查看 */
+    rt_kprintf("Air:   AQI=%d  ADC=%d %dmV\n", g_sensor.air_quality, adc_air, mv_air);
+    rt_kprintf("Water: %d%%     ADC=%d %dmV\n", g_sensor.water_level, adc_water, mv_water);
+    rt_kprintf("PH:    %d.%02d    ADC=%d %dmV\n",
+              (int)g_sensor.ph_value,
+              (int)(g_sensor.ph_value * 100) % 100,
+              adc_ph, mv_ph);
     rt_kprintf("Mode:  %s\n", g_sensor.run_mode == MODE_AUTO ? "Auto" : "Manual");
 }
 MSH_CMD_EXPORT(sensor, show all sensor data);
