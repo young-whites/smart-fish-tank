@@ -18,7 +18,7 @@ config PKGS_DIR
 config PLATFORM_DIR
     string
     option env="PLATFORM_DIR"
-    default  "I:/Outsource_Design_Workspace/RT-Thread-Studio_Workspace/Floder-005-Intellgence_finsh_tank/OutSource-005-Intellgence_finsh_tank/platform"
+    default "I:/Outsource_Design_Workspace/RT-Thread-Studio_Workspace/Floder-005-Intellgence_finsh_tank/OutSource-005-Intellgence_finsh_tank/platform"
 
 source "$RTT_DIR/Kconfig"
     

@@ -2,60 +2,84 @@
  * @file    app_sensor.c
  * @brief   传感器采集模块 (DS18B20 + ADC)
  *
- *  DS18B20 驱动移植自 ds18b20-latest (RT-Thread 官方组件)
- *  使用 rt_pin_* 和 rt_hw_us_delay 保证时序精度
+ *  DS18B20 时序参数移植自 ds18b20-latest RTT 官方组件
+ *  使用 CMSIS 寄存器操作 (RT-Thread Nano 无 rtdevice)
  */
 
 #include "app_data.h"
 #include "app_sensor.h"
-#include "rtdevice.h"
 #include "stm32f1xx.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <finsh.h>
 
-/* ========== DS18B20 (RT-Thread pin API) ========== */
+/* ========== DS18B20 1-Wire (PB13, CMSIS) ========== */
 
-#define DS18B20_PIN  GET_PIN(B, 13)
-
-static void ds18b20_reset(void)
+/* PB13 引脚操作 */
+static void ds18b20_pin_out(void)
 {
-    rt_pin_mode(DS18B20_PIN, PIN_MODE_OUTPUT);
-    rt_pin_write(DS18B20_PIN, PIN_LOW);
-    rt_hw_us_delay(780);
-    rt_pin_write(DS18B20_PIN, PIN_HIGH);
-    rt_hw_us_delay(40);
+    GPIOB->CRH &= ~(0xFU << 20);
+    GPIOB->CRH |=  (0x3U << 20);  /* 推挽输出 50MHz */
 }
 
+static void ds18b20_pin_in(void)
+{
+    GPIOB->CRH &= ~(0xFU << 20);
+    GPIOB->CRH |=  (0x8U << 20);  /* 上拉输入 */
+    GPIOB->BSRR = (1U << 13);
+}
+
+/* 基于 SysTick 的精确微秒延时 (移植自 rt_hw_us_delay) */
+static void ds18b20_delay_us(uint32_t us)
+{
+    uint32_t ticks_per_us = SysTick->LOAD / (1000000 / RT_TICK_PER_SECOND);
+    uint32_t start = SysTick->VAL;
+    uint32_t target = us * ticks_per_us;
+    while((start - SysTick->VAL) < target);
+}
+
+/* 复位 (时序参数来自 ds18b20-latest) */
+static void ds18b20_reset(void)
+{
+    ds18b20_pin_out();
+    GPIOB->BRR = (1U << 13);         /* 拉低 */
+    ds18b20_delay_us(780);            /* 780μs (480~960) */
+    GPIOB->BSRR = (1U << 13);        /* 释放 */
+    ds18b20_delay_us(40);             /* 40μs (15~60) */
+}
+
+/* 检测存在脉冲 */
 static uint8_t ds18b20_connect(void)
 {
     uint8_t retry = 0;
-    rt_pin_mode(DS18B20_PIN, PIN_MODE_INPUT);
+    ds18b20_pin_in();
 
-    while(rt_pin_read(DS18B20_PIN) && retry < 200) { retry++; rt_hw_us_delay(1); }
+    while((GPIOB->IDR & (1U << 13)) && retry < 200) { retry++; ds18b20_delay_us(1); }
     if(retry >= 200) return 1;
 
     retry = 0;
-    while(!rt_pin_read(DS18B20_PIN) && retry < 240) { retry++; rt_hw_us_delay(1); }
+    while(!(GPIOB->IDR & (1U << 13)) && retry < 240) { retry++; ds18b20_delay_us(1); }
     if(retry >= 240) return 1;
 
     return 0;
 }
 
+/* 读一个位 */
 static uint8_t ds18b20_read_bit(void)
 {
     uint8_t data;
-    rt_pin_mode(DS18B20_PIN, PIN_MODE_OUTPUT);
-    rt_pin_write(DS18B20_PIN, PIN_LOW);
-    rt_hw_us_delay(2);
-    rt_pin_write(DS18B20_PIN, PIN_HIGH);
-    rt_pin_mode(DS18B20_PIN, PIN_MODE_INPUT);
-    rt_hw_us_delay(5);
-    data = rt_pin_read(DS18B20_PIN) ? 1 : 0;
-    rt_hw_us_delay(50);
+    ds18b20_pin_out();
+    GPIOB->BRR = (1U << 13);
+    ds18b20_delay_us(2);
+    GPIOB->BSRR = (1U << 13);
+    ds18b20_pin_in();
+    ds18b20_delay_us(5);
+    data = (GPIOB->IDR & (1U << 13)) ? 1 : 0;
+    ds18b20_delay_us(50);
     return data;
 }
 
+/* 读一个字节 */
 static uint8_t ds18b20_read_byte(void)
 {
     uint8_t i, j, dat = 0;
@@ -66,23 +90,25 @@ static uint8_t ds18b20_read_byte(void)
     return dat;
 }
 
+/* 写一个字节 */
 static void ds18b20_write_byte(uint8_t dat)
 {
     uint8_t j, testb;
-    rt_pin_mode(DS18B20_PIN, PIN_MODE_OUTPUT);
+    ds18b20_pin_out();
     for(j = 1; j <= 8; j++) {
         testb = dat & 0x01;
         dat >>= 1;
         if(testb) {
-            rt_pin_write(DS18B20_PIN, PIN_LOW); rt_hw_us_delay(2);
-            rt_pin_write(DS18B20_PIN, PIN_HIGH); rt_hw_us_delay(60);
+            GPIOB->BRR = (1U << 13); ds18b20_delay_us(2);
+            GPIOB->BSRR = (1U << 13); ds18b20_delay_us(60);
         } else {
-            rt_pin_write(DS18B20_PIN, PIN_LOW); rt_hw_us_delay(60);
-            rt_pin_write(DS18B20_PIN, PIN_HIGH); rt_hw_us_delay(2);
+            GPIOB->BRR = (1U << 13); ds18b20_delay_us(60);
+            GPIOB->BSRR = (1U << 13); ds18b20_delay_us(2);
         }
     }
 }
 
+/* 启动转换 */
 static void ds18b20_start(void)
 {
     ds18b20_reset();
@@ -94,7 +120,7 @@ static void ds18b20_start(void)
 /*
  * 读取温度
  * 返回: 0=成功, 1=传感器无响应
- * temp_x10: 温度值 × 10 (如 253 = 25.3°C)
+ * temp_x10: 温度 × 10 (如 253 = 25.3°C)
  */
 static uint8_t ds18b20_read_temp_x10(int32_t *temp_x10)
 {
@@ -149,9 +175,7 @@ static uint16_t adc_read_avg(uint8_t channel)
 {
     uint32_t sum = 0;
     uint8_t i;
-    for(i = 0; i < ADC_AVG_SAMPLES; i++) {
-        sum += adc_read_raw(channel);
-    }
+    for(i = 0; i < ADC_AVG_SAMPLES; i++) sum += adc_read_raw(channel);
     return (uint16_t)(sum / ADC_AVG_SAMPLES);
 }
 
@@ -195,10 +219,11 @@ static void sensor_thread_entry(void *param)
     int32_t temp_x10;
     uint16_t adc_air, adc_water, adc_ph;
 
+    RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
     adc_init();
 
     while(1) {
-        /* DS18B20 温度 */
+        /* DS18B20 */
         if(ds18b20_read_temp_x10(&temp_x10) == 0 && temp_x10 > -500 && temp_x10 < 1250) {
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
             g_sensor.water_temp = (float)temp_x10 * 0.1f;

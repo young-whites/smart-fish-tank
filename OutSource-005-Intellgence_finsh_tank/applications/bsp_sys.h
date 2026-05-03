@@ -25,7 +25,6 @@
 #include "stdlib.h"
 
 /* 该头文件包含了所有CubeMX自动生成的初始化引脚 */
-#include "main.h"
 
 
 
