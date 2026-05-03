@@ -2,6 +2,8 @@
 #include "app_sensor.h"
 #include "stm32f1xx.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <finsh.h>
 
 /* ========== DS18B20 1-Wire (PB13) ========== */
 
@@ -265,3 +267,28 @@ void app_sensor_init(void)
         15, 10);
     rt_thread_startup(&sensor_thread);
 }
+
+/* ========== FinSH 调试命令 ========== */
+
+static void temp(void)
+{
+    if(g_sensor_temp_valid)
+        rt_kprintf("Temp: %.2f C\n", g_sensor.water_temp);
+    else
+        rt_kprintf("Temp: sensor offline\n");
+}
+MSH_CMD_EXPORT(temp, show DS18B20 temperature);
+
+static void sensor(void)
+{
+    rt_kprintf("--- Sensor Data ---\n");
+    if(g_sensor_temp_valid)
+        rt_kprintf("Temp:  %.2f C\n", g_sensor.water_temp);
+    else
+        rt_kprintf("Temp:  --.- (offline)\n");
+    rt_kprintf("Air:   %d\n", g_sensor.air_quality);
+    rt_kprintf("Water: %d%%\n", g_sensor.water_level);
+    rt_kprintf("PH:    %.2f\n", g_sensor.ph_value);
+    rt_kprintf("Mode:  %s\n", g_sensor.run_mode == MODE_AUTO ? "Auto" : "Manual");
+}
+MSH_CMD_EXPORT(sensor, show all sensor data);
