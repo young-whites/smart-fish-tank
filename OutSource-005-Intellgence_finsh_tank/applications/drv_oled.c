@@ -4,7 +4,6 @@
  */
 
 #include "drv_oled.h"
-#include "font_8x16.h"
 #include "stm32f1xx.h"
 #include <string.h>
 
@@ -455,87 +454,7 @@ void oled_draw_float(uint8_t x, uint8_t page, float num, uint8_t decimal)
 
 /* ===================== 8x16 字体绘制 ===================== */
 
-void oled_draw_char_8x16(uint8_t x, uint8_t page, char ch)
-{
-    if (ch < 0x20 || ch > 0x7E) return;
-    if (x > OLED_WIDTH - 8) return;
-    if (page > OLED_PAGES - 2) return;
 
-    const uint8_t *glyph = &font_8x16_data[(ch - 0x20) * 16];
-
-    /* 字体: 每行1字节(水平), OLED: 每列1字节(垂直) → 需转置 */
-    for (uint8_t col = 0; col < 8; col++) {
-        uint8_t page_data = 0;
-        for (uint8_t row = 0; row < 8; row++) {
-            if (glyph[row] & (0x80 >> col))
-                page_data |= (1 << row);
-        }
-        oled_buf[page * OLED_WIDTH + x + col] = page_data;
-    }
-    for (uint8_t col = 0; col < 8; col++) {
-        uint8_t page_data = 0;
-        for (uint8_t row = 0; row < 8; row++) {
-            if (glyph[8 + row] & (0x80 >> col))
-                page_data |= (1 << row);
-        }
-        oled_buf[(page + 1) * OLED_WIDTH + x + col] = page_data;
-    }
-}
-
-void oled_draw_string_8x16(uint8_t x, uint8_t page, const char *str)
-{
-    while (*str) {
-        if (x > OLED_WIDTH - 8) break;
-        oled_draw_char_8x16(x, page, *str);
-        x += 8;
-        str++;
-    }
-}
-
-/* ===================== 16x16 汉字绘制 ===================== */
-
-#include "font_lib.h"
-
-/*
- * 在 OLED 缓冲区中绘制一个 16x16 汉字
- * x:    像素列 (0~112)
- * page: 起始页 (0~6, 需要连续2页空间)
- *
- * 字体数据格式: 横向扫描, 字节高位在前
- *   每行 2 字节 (hi_byte, lo_byte), 共 16 行
- * OLED 缓冲区: 垂直字节, 每页 8 行
- *
- * 转换: 字体行 r → OLED 像素行 (page*8 + r%8)
- *       字体第 r 行的数据 → oled_buf 的 page+(r/8) 页
- */
-void oled_draw_chinese_char(uint8_t x, uint8_t page, uint16_t unicode)
-{
-    const unsigned char *bmp = font_get_bitmap(unicode);
-    uint16_t idx;
-    if (!bmp) return;
-    if (x > OLED_WIDTH - 16) return;
-    if (page > OLED_PAGES - 2) return;
-
-    for (int row = 0; row < 16; row++) {
-        uint8_t hi = bmp[row * 2];
-        uint8_t lo = bmp[row * 2 + 1];
-        uint8_t target_page = page + (row / 8);
-        uint8_t bit_mask = (1 << (row % 8));
-
-        for (int col = 0; col < 8; col++) {
-            idx = target_page * OLED_WIDTH + x + col;
-            if (idx < sizeof(oled_buf) && (hi & (0x80 >> col))) {
-                oled_buf[idx] |= bit_mask;
-            }
-        }
-        for (int col = 0; col < 8; col++) {
-            idx = target_page * OLED_WIDTH + x + 8 + col;
-            if (idx < sizeof(oled_buf) && (lo & (0x80 >> col))) {
-                oled_buf[idx] |= bit_mask;
-            }
-        }
-    }
-}
 
 /* UTF-8 解码辅助 */
 static uint32_t _oled_utf8_decode(const char *str, int *bytes)

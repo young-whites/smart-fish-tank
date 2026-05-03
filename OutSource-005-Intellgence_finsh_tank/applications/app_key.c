@@ -5,46 +5,46 @@
 
 uint8_t g_key_event = 0;
 
-/* KEY1=PA6, KEY2=PA7, KEY3=PB0, KEY4=PB10, KEY5=PB11 */
+/* KEY1=PA6, KEY2=PA7, KEY3=PB0, KEY4=PA3, KEY5=PA4 */
 /* 所有按键: 下拉输入, 高电平有效 */
 
 static void key_gpio_init(void)
 {
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN;
 
-    /* PA6: 下拉输入 -> CRL[27:24] MODE=00, CNF=10 */
+    /* PA6: 下拉输入 -> CRL[27:24] */
     GPIOA->CRL &= ~(0xFU << 24);
     GPIOA->CRL |=  (0x8U << 24);
-    GPIOA->BRR = (1U << 6);      /* 下拉 */
+    GPIOA->BRR = (1U << 6);
 
     /* PA7: 下拉输入 -> CRL[31:28] */
     GPIOA->CRL &= ~(0xFU << 28);
     GPIOA->CRL |=  (0x8U << 28);
     GPIOA->BRR = (1U << 7);
 
+    /* PA3: 下拉输入 -> CRL[15:12] */
+    GPIOA->CRL &= ~(0xFU << 12);
+    GPIOA->CRL |=  (0x8U << 12);
+    GPIOA->BRR = (1U << 3);
+
+    /* PA4: 下拉输入 -> CRL[19:16] */
+    GPIOA->CRL &= ~(0xFU << 16);
+    GPIOA->CRL |=  (0x8U << 16);
+    GPIOA->BRR = (1U << 4);
+
     /* PB0: 下拉输入 -> CRL[3:0] */
     GPIOB->CRL &= ~(0xFU << 0);
     GPIOB->CRL |=  (0x8U << 0);
     GPIOB->BRR = (1U << 0);
-
-    /* PB10: 下拉输入 -> CRH[7:4] */
-    GPIOB->CRH &= ~(0xFU << 4);
-    GPIOB->CRH |=  (0x8U << 4);
-    GPIOB->BRR = (1U << 10);
-
-    /* PB11: 下拉输入 -> CRH[11:8] */
-    GPIOB->CRH &= ~(0xFU << 8);
-    GPIOB->CRH |=  (0x8U << 8);
-    GPIOB->BRR = (1U << 11);
 }
 
 static uint8_t key_scan(void)
 {
-    if( (GPIOA->IDR & (1U << 6)))  return 1;   /* KEY1=PA6 */
-    if( (GPIOA->IDR & (1U << 7)))  return 2;   /* KEY2=PA7 */
-    if( (GPIOB->IDR & (1U << 0)))  return 3;   /* KEY3=PB0 */
-    if( (GPIOB->IDR & (1U << 10))) return 4;   /* KEY4=PB10 */
-    if( (GPIOB->IDR & (1U << 11))) return 5;   /* KEY5=PB11 */
+    if( (GPIOA->IDR & (1U << 6))) return 1;   /* KEY1=PA6 */
+    if( (GPIOA->IDR & (1U << 7))) return 2;   /* KEY2=PA7 */
+    if( (GPIOB->IDR & (1U << 0))) return 3;   /* KEY3=PB0 */
+    if( (GPIOA->IDR & (1U << 3))) return 4;   /* KEY4=PA3 */
+    if( (GPIOA->IDR & (1U << 4))) return 5;   /* KEY5=PA4 */
     return 0;
 }
 
