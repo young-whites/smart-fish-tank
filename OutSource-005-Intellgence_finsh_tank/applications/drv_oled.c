@@ -376,6 +376,18 @@ void oled_draw_string(uint8_t x, uint8_t page, const char *str)
     }
 }
 
+void oled_draw_string_offset(uint8_t x, uint8_t page, const char *str, uint8_t y_offset)
+{
+    uint8_t cx = x;
+    while (*str)
+    {
+        if (cx > OLED_WIDTH - 6) break;
+        oled_draw_char_offset(cx, page, *str, y_offset);
+        cx += 6;
+        str++;
+    }
+}
+
 void oled_draw_number(uint8_t x, uint8_t page, int32_t num)
 {
     char buf[12];

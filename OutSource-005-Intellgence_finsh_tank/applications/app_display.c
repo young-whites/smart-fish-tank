@@ -40,7 +40,7 @@ static void draw_page_indicator(void)
     char buf[8];
     rt_snprintf(buf, sizeof(buf), "P%d/%d", sub_page + 1, get_max_subs());
     /* 8x16字体: 页码放在第4行(page 6)右端 */
-    oled_draw_string(96, 6, buf);
+    oled_draw_string_offset(96, 6, buf, 2);
 }
 
 /* ===================== 主页面 (混合汉字+ASCII) ===================== */
@@ -59,13 +59,13 @@ static void draw_main_p0_data(void)
         rt_snprintf(buf, sizeof(buf), "Temp:  %d.%02d C", ti, tf);
     } else
         rt_snprintf(buf, sizeof(buf), "Temp:  --.- C");
-    oled_draw_string(0, 0, buf);
+    oled_draw_string_offset(0, 0, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "Air:   %d", g_sensor.air_quality);
-    oled_draw_string(0, 1, buf);
+    oled_draw_string_offset(0, 1, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "Water: %d%%", g_sensor.water_level);
-    oled_draw_string(0, 2, buf);
+    oled_draw_string_offset(0, 2, buf, 2);
 
     {
         int pi = (int)g_sensor.ph_value;
@@ -73,7 +73,7 @@ static void draw_main_p0_data(void)
         if(pf < 0) pf = -pf;
         rt_snprintf(buf, sizeof(buf), "PH:    %d.%02d", pi, pf);
     }
-    oled_draw_string(0, 3, buf);
+    oled_draw_string_offset(0, 3, buf, 2);
 
     draw_page_indicator();
 }
@@ -84,7 +84,7 @@ static void draw_main_p1_data(void)
 
     oled_clear_region(0, 7, 0, 127);
 
-    oled_draw_string(0, 0, (g_sensor.run_mode == MODE_AUTO) ? "Mode:  Auto" : "Mode:  Manu");
+    oled_draw_string_offset(0, 0, (g_sensor.run_mode == MODE_AUTO) ? "Mode:  Auto" : "Mode:  Manu", 2);
 
     if (g_sensor.feed_countdown > 0)
         rt_snprintf(buf, sizeof(buf), "Feed:  %02d:%02d",
@@ -92,14 +92,14 @@ static void draw_main_p1_data(void)
                     (int)(g_sensor.feed_countdown % 60));
     else
         rt_snprintf(buf, sizeof(buf), "Feed:  --:--");
-    oled_draw_string(0, 1, buf);
+    oled_draw_string_offset(0, 1, buf, 2);
 
-    oled_draw_string(0, 2, "WiFi:  W-");
+    oled_draw_string_offset(0, 2, "WiFi:  W-", 2);
 
     rt_snprintf(buf, sizeof(buf), "Heat:%s  O2:%s",
                 g_status.relay_heat ? "ON" : "OF",
                 g_status.relay_oxygen ? "ON" : "OF");
-    oled_draw_string(0, 3, buf);
+    oled_draw_string_offset(0, 3, buf, 2);
 
     draw_page_indicator();
 }
@@ -141,24 +141,24 @@ static void draw_threshold_p0_data(void)
 
     oled_clear_region(0, 7, 0, 127);
 
-    oled_draw_string(0, 0, "-- Threshold Set --");
+    oled_draw_string_offset(0, 0, "-- Threshold Set --", 2);
 
     rt_snprintf(buf, sizeof(buf), "TLo:%d.%dC %s",
                 (int)g_threshold.temp_lower,
                 ((int)(g_threshold.temp_lower * 10)) % 10,
                 (edit_cursor == 0) ? "<<" : "");
-    oled_draw_string(0, 1, buf);
+    oled_draw_string_offset(0, 1, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "THi:%d.%dC %s",
                 (int)g_threshold.temp_upper,
                 ((int)(g_threshold.temp_upper * 10)) % 10,
                 (edit_cursor == 1) ? "<<" : "");
-    oled_draw_string(0, 2, buf);
+    oled_draw_string_offset(0, 2, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "Air:%d %s",
                 g_threshold.air_quality_max,
                 (edit_cursor == 2) ? "<<" : "");
-    oled_draw_string(0, 3, buf);
+    oled_draw_string_offset(0, 3, buf, 2);
 
     draw_page_indicator();
 }
@@ -173,23 +173,23 @@ static void draw_threshold_p1_data(void)
                 (int)g_threshold.ph_lower,
                 ((int)(g_threshold.ph_lower * 10)) % 10,
                 (edit_cursor == 3) ? "<<" : "");
-    oled_draw_string(0, 0, buf);
+    oled_draw_string_offset(0, 0, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "PHH:%d.%d %s",
                 (int)g_threshold.ph_upper,
                 ((int)(g_threshold.ph_upper * 10)) % 10,
                 (edit_cursor == 4) ? "<<" : "");
-    oled_draw_string(0, 1, buf);
+    oled_draw_string_offset(0, 1, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "WLM:%d%% %s",
                 g_threshold.water_level_min,
                 (edit_cursor == 5) ? "<<" : "");
-    oled_draw_string(0, 2, buf);
+    oled_draw_string_offset(0, 2, buf, 2);
 
     rt_snprintf(buf, sizeof(buf), "WLX:%d%% %s",
                 g_threshold.water_level_max,
                 (edit_cursor == 6) ? "<<" : "");
-    oled_draw_string(0, 3, buf);
+    oled_draw_string_offset(0, 3, buf, 2);
 
     draw_page_indicator();
 }
@@ -240,7 +240,7 @@ static void draw_manual_data(void)
 
     oled_clear_region(0, 7, 0, 127);
 
-    oled_draw_string(0, 0, "-- Manual Control --");
+    oled_draw_string_offset(0, 0, "-- Manual Control --", 2);
 
     for (i = 0; i < MANUAL_ITEMS; i++) {
         uint8_t row = 1 + i;
@@ -249,7 +249,7 @@ static void draw_manual_data(void)
                     mark, manual_labels[i],
                     (*manual_status[i]) ? "ON" : "OFF",
                     (i == edit_cursor) ? "<<" : "");
-        oled_draw_string(0, row, buf);
+        oled_draw_string_offset(0, row, buf, 2);
     }
 
     draw_page_indicator();
