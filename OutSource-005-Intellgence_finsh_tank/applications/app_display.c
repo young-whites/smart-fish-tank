@@ -252,24 +252,27 @@ static void show_manual_page(void)
 
 /* ===================== 按键处理 ===================== */
 
-static void handle_key_event(uint8_t key)
+/* @return 1=状态变更需刷新, 0=无效按键不刷新 */
+static int handle_key_event(uint8_t key)
 {
     switch (key) {
-    case 1: /* KEY1: 切换主页面 */
+    case 1: /* KEY1: 切换主页面 (所有页面通用) */
         main_page++;
         if (main_page > 2) main_page = 0;
         sub_page = 0;
         edit_cursor = 0;
-        break;
+        return 1;
 
-    case 2: /* KEY2: 切换子页 */
-        sub_page++;
-        if (sub_page >= get_max_subs()) sub_page = 0;
-        break;
+    case 2: /* KEY2: 切换子页 (仅主页和阈值页) */
+        if (main_page == 0 || main_page == 1) {
+            sub_page++;
+            if (sub_page >= get_max_subs()) sub_page = 0;
+            return 1;
+        }
+        return 0;  /* 手动页无子页, 按键无效 */
 
-    case 3: /* KEY3: 加/切换 */
+    case 3: /* KEY3: 阈值+1 或 手动开关切换 */
         if (main_page == 1) {
-            /* 阈值设置页: 当前项 +1 */
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
             switch (edit_cursor) {
                 case 0: g_threshold.temp_lower += 1.0f; break;
@@ -281,15 +284,16 @@ static void handle_key_event(uint8_t key)
                 case 6: g_threshold.water_level_max += 5; break;
             }
             rt_mutex_release(&mutex_data);
+            return 1;
         } else if (main_page == 2) {
-            /* 手动控制页: 切换开关 */
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
             *manual_status[edit_cursor] = !(*manual_status[edit_cursor]);
             rt_mutex_release(&mutex_data);
+            return 1;
         }
-        break;
+        return 0;  /* 主页面按 KEY3 无效 */
 
-    case 4: /* KEY4: 减 */
+    case 4: /* KEY4: 阈值-1 (仅阈值页) */
         if (main_page == 1) {
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
             switch (edit_cursor) {
@@ -302,18 +306,24 @@ static void handle_key_event(uint8_t key)
                 case 6: if (g_threshold.water_level_max >= 5) g_threshold.water_level_max -= 5; break;
             }
             rt_mutex_release(&mutex_data);
-        } else if (main_page == 1) {
-            /* 阈值页: KEY4 也可切换编辑项 */
+            return 1;
         }
-        break;
+        return 0;  /* 主页/手动页按 KEY4 无效 */
 
-    case 5: /* KEY5: 阈值页切换编辑项 / 手动页也切换项 */
-        if (main_page == 1 || main_page == 2) {
-            uint8_t max_items = (main_page == 1) ? THRESHOLD_ITEMS : MANUAL_ITEMS;
+    case 5: /* KEY5: 切换编辑项 (仅阈值页和手动页) */
+        if (main_page == 1) {
             edit_cursor++;
-            if (edit_cursor >= max_items) edit_cursor = 0;
+            if (edit_cursor >= THRESHOLD_ITEMS) edit_cursor = 0;
+            return 1;
+        } else if (main_page == 2) {
+            edit_cursor++;
+            if (edit_cursor >= MANUAL_ITEMS) edit_cursor = 0;
+            return 1;
         }
-        break;
+        return 0;  /* 主页面按 KEY5 无效 */
+
+    default:
+        return 0;
     }
 }
 
@@ -332,7 +342,7 @@ static void refresh_display(void)
 /* ===================== 线程 ===================== */
 
 static struct rt_thread display_thread;
-static rt_uint8_t display_stack[1024];
+static rt_uint8_t display_stack[2048];
 
 static void display_thread_entry(void *param)
 {
@@ -346,15 +356,22 @@ static void display_thread_entry(void *param)
         /* 等待按键事件 (最多等 1 秒, 超时则刷新数据) */
         rt_err_t result = rt_sem_take(&sem_key, rt_tick_from_millisecond(1000));
 
+        int need_refresh = 0;
+
         if (result == RT_EOK) {
-            /* 有按键事件 */
+            /* 有按键事件, 判断是否需要刷新 */
             uint8_t key = g_key_event;
             g_key_event = 0;
-            handle_key_event(key);
+            need_refresh = handle_key_event(key);
+        } else {
+            /* 超时: 定时刷新传感器数据 */
+            need_refresh = 1;
         }
 
-        /* 刷新显示 (有按键或 1 秒超时都刷新) */
-        refresh_display();
+        /* 只有状态变更或定时超时才刷新, 无效按键不刷屏 */
+        if (need_refresh) {
+            refresh_display();
+        }
     }
 }
 

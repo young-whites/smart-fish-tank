@@ -324,6 +324,36 @@ void oled_draw_char(uint8_t x, uint8_t page, char ch)
             oled_buf[(page + 1) * OLED_WIDTH + x + i] = font_6x12[ch - ' '][i + 6];
 }
 
+/*
+ * 绘制 ASCII 字符，支持 Y 方向像素偏移
+ * y_offset: 向下偏移像素数 (0~7)
+ * 用于混合行中对齐 16x16 汉字基线 (汉字像素从第2行开始)
+ */
+void oled_draw_char_offset(uint8_t x, uint8_t page, char ch, uint8_t y_offset)
+{
+    uint8_t i;
+    if (ch < ' ' || ch > '~') return;
+    if (x > OLED_WIDTH - 6) return;
+    if (y_offset >= 8) return;
+    if (y_offset == 0) {
+        oled_draw_char(x, page, ch);
+        return;
+    }
+
+    /* 将 12px 字体下移 y_offset 像素 */
+    for (i = 0; i < 6; i++) {
+        uint8_t lo = font_6x12[ch - ' '][i];
+        uint8_t hi = font_6x12[ch - ' '][i + 6];
+        /* 合并上下两部分，下移 y_offset 位 */
+        uint16_t combined = ((uint16_t)hi << 8) | lo;
+        combined <<= y_offset;
+        if (page < OLED_PAGES)
+            oled_buf[page * OLED_WIDTH + x + i] |= (uint8_t)(combined & 0xFF);
+        if (page + 1 < OLED_PAGES)
+            oled_buf[(page + 1) * OLED_WIDTH + x + i] |= (uint8_t)((combined >> 8) & 0xFF);
+    }
+}
+
 void oled_draw_string(uint8_t x, uint8_t page, const char *str)
 {
     uint8_t cx = x;
@@ -431,6 +461,7 @@ void oled_draw_float(uint8_t x, uint8_t page, float num, uint8_t decimal)
 void oled_draw_chinese_char(uint8_t x, uint8_t page, uint16_t unicode)
 {
     const unsigned char *bmp = font_get_bitmap(unicode);
+    uint16_t idx;
     if (!bmp) return;
     if (x > OLED_WIDTH - 16) return;
     if (page > OLED_PAGES - 2) return;
@@ -442,13 +473,15 @@ void oled_draw_chinese_char(uint8_t x, uint8_t page, uint16_t unicode)
         uint8_t bit_mask = (1 << (row % 8));
 
         for (int col = 0; col < 8; col++) {
-            if (hi & (0x80 >> col)) {
-                oled_buf[target_page * OLED_WIDTH + x + col] |= bit_mask;
+            idx = target_page * OLED_WIDTH + x + col;
+            if (idx < sizeof(oled_buf) && (hi & (0x80 >> col))) {
+                oled_buf[idx] |= bit_mask;
             }
         }
         for (int col = 0; col < 8; col++) {
-            if (lo & (0x80 >> col)) {
-                oled_buf[target_page * OLED_WIDTH + x + 8 + col] |= bit_mask;
+            idx = target_page * OLED_WIDTH + x + 8 + col;
+            if (idx < sizeof(oled_buf) && (lo & (0x80 >> col))) {
+                oled_buf[idx] |= bit_mask;
             }
         }
     }
@@ -521,15 +554,13 @@ void oled_draw_mix_line(uint8_t page, const char *chinese_label, const char *asc
         }
     }
 
-    /* 右侧: ASCII 文本 (垂直居中在 16px 行内, 偏上 2px) */
+    /* 右侧: ASCII 文本 (下移 2px 对齐汉字基线) */
     if (ascii_text) {
-        /* 在 page 的第 2 个子页开始画 ASCII (偏上对齐) */
         uint8_t ax = cx + 2;
         const char *s = ascii_text;
         while (*s) {
             if (ax > OLED_WIDTH - 6) break;
-            /* ASCII 在 page 开始绘制, 占 page~page+1 */
-            oled_draw_char(ax, page, *s);
+            oled_draw_char_offset(ax, page, *s, 2);
             ax += 6;
             s++;
         }

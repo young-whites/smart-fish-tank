@@ -39,6 +39,7 @@ void oled_display_off(void);
 
 void oled_draw_pixel(uint8_t x, uint8_t y, uint8_t on);
 void oled_draw_char(uint8_t x, uint8_t page, char ch);
+void oled_draw_char_offset(uint8_t x, uint8_t page, char ch, uint8_t y_offset);
 void oled_draw_string(uint8_t x, uint8_t page, const char *str);
 void oled_draw_number(uint8_t x, uint8_t page, int32_t num);
 void oled_draw_float(uint8_t x, uint8_t page, float num, uint8_t decimal);
