@@ -342,7 +342,7 @@ static void refresh_display(void)
 /* ===================== 线程 ===================== */
 
 static struct rt_thread display_thread;
-static rt_uint8_t display_stack[2048];
+static rt_uint8_t display_stack[1536];
 
 static void display_thread_entry(void *param)
 {
