@@ -109,23 +109,29 @@ static void show_main_page(void)
 
 /* ===================== 阈值设置页面 (纯ASCII) ===================== */
 
+/*
+ * 阈值页布局: 标签 固定8字符 | 右对齐数值 | 单位 | 光标
+ *   TempLow:   20.0C <<
+ *   TempUp:    30.0C
+ *   AirMax:      500  <<
+ */
 static void show_threshold_page_0(void)
 {
     char buf[24];
 
     oled_draw_string(0, 0, "-- Threshold Set --");
 
-    rt_snprintf(buf, sizeof(buf), "TempLow: %.1fC%s",
+    rt_snprintf(buf, sizeof(buf), "TempLow:%7.1fC%s",
                 g_threshold.temp_lower,
-                (edit_cursor == 0) ? "<<" : "");
+                (edit_cursor == 0) ? " <<" : "");
     oled_draw_string(0, 1, buf);
 
-    rt_snprintf(buf, sizeof(buf), "TempUp:  %.1fC%s",
+    rt_snprintf(buf, sizeof(buf), "TempUp: %7.1fC%s",
                 g_threshold.temp_upper,
-                (edit_cursor == 1) ? "<<" : "");
+                (edit_cursor == 1) ? " <<" : "");
     oled_draw_string(0, 2, buf);
 
-    rt_snprintf(buf, sizeof(buf), "AirMax:  %d%s",
+    rt_snprintf(buf, sizeof(buf), "AirMax: %7d  %s",
                 g_threshold.air_quality_max,
                 (edit_cursor == 2) ? "<<" : "");
     oled_draw_string(0, 3, buf);
@@ -135,22 +141,22 @@ static void show_threshold_page_1(void)
 {
     char buf[24];
 
-    rt_snprintf(buf, sizeof(buf), "PH Low:  %.1f%s",
+    rt_snprintf(buf, sizeof(buf), "PH Low: %5.1f   %s",
                 g_threshold.ph_lower,
                 (edit_cursor == 3) ? "<<" : "");
     oled_draw_string(0, 0, buf);
 
-    rt_snprintf(buf, sizeof(buf), "PH Up:   %.1f%s",
+    rt_snprintf(buf, sizeof(buf), "PH Up:  %5.1f   %s",
                 g_threshold.ph_upper,
                 (edit_cursor == 4) ? "<<" : "");
     oled_draw_string(0, 1, buf);
 
-    rt_snprintf(buf, sizeof(buf), "WL Min:  %d%%%s",
+    rt_snprintf(buf, sizeof(buf), "WL Min: %4d%%  %s",
                 g_threshold.water_level_min,
                 (edit_cursor == 5) ? "<<" : "");
     oled_draw_string(0, 2, buf);
 
-    rt_snprintf(buf, sizeof(buf), "WL Max:  %d%%%s",
+    rt_snprintf(buf, sizeof(buf), "WL Max: %4d%%  %s",
                 g_threshold.water_level_max,
                 (edit_cursor == 6) ? "<<" : "");
     oled_draw_string(0, 3, buf);
@@ -198,9 +204,10 @@ static void show_manual_page(void)
         if (row > 6) break;
 
         char mark = (i == edit_cursor) ? '>' : ' ';
-        rt_snprintf(buf, sizeof(buf), "%c %s: %s",
+        rt_snprintf(buf, sizeof(buf), "%c %s: %3s %s",
                     mark, manual_labels[i],
-                    (*manual_status[i]) ? "ON " : "OFF");
+                    (*manual_status[i]) ? "ON" : "OFF",
+                    (i == edit_cursor) ? "<<" : "");
         oled_draw_string(0, row, buf);
     }
 
