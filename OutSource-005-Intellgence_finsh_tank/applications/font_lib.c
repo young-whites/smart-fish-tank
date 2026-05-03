@@ -15,7 +15,7 @@ extern void oled_draw_pixel(uint8_t x, uint8_t y, uint8_t on);
  *  Unicode 码表 (按升序排列, 与 bin_data 一一对应)
  *  支持二分查找 O(log n)
  * ============================================================ */
-static const uint16_t unicode_table[FONT_CHAR_COUNT] = {
+static const uint16_t unicode_table[FONT_CHAR_COUNT] __attribute__((section(".rodata"))) = {
     /*  0 */ 0x4E0A,  /* 上 */
     /*  1 */ 0x4E0B,  /* 下 */
     /*  2 */ 0x4F4D,  /* 位 */
@@ -55,7 +55,7 @@ static const uint16_t unicode_table[FONT_CHAR_COUNT] = {
  *  横向扫描, 字节高位在前
  *  排列顺序: 与 unicode_table 一一对应
  * ============================================================ */
-static const unsigned char bin_data[FONT_CHAR_COUNT * FONT_BYTES_PER_CHAR] = {
+static const unsigned char bin_data[FONT_CHAR_COUNT * FONT_BYTES_PER_CHAR] __attribute__((section(".rodata"))) = {
     /*  0 上 (4E0A) */
     0x00,0x00,0x00,0x00,0x01,0x00,0x01,0x00,
     0x01,0x00,0x01,0x00,0x01,0xF8,0x01,0x00,
