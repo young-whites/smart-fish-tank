@@ -13,127 +13,124 @@
 #include <stdio.h>
 #include <finsh.h>
 
-/* ========== DS18B20 1-Wire (PB13, CMSIS) ========== */
+/* ========== DS18B20 1-Wire (PB1, CMSIS) ========== */
 
-/* PB1 引脚操作 */
-static void ds18b20_pin_out(void)
+/* 简单微秒延时 (72MHz, 每us约18轮×4周期=72周期) */
+static void delay_us(uint32_t us)
+{
+    while(us--) {
+        volatile uint32_t i = 18;
+        while(i--);
+    }
+}
+
+/* PB1 引脚: 输出模式 */
+static void DS18B20_IO_OUT(void)
 {
     GPIOB->CRL &= ~(0xFU << 4);
     GPIOB->CRL |=  (0x3U << 4);  /* 推挽输出 50MHz */
 }
 
-static void ds18b20_pin_in(void)
+/* PB1 引脚: 上拉输入模式 */
+static void DS18B20_IO_IN(void)
 {
     GPIOB->CRL &= ~(0xFU << 4);
     GPIOB->CRL |=  (0x8U << 4);  /* 上拉输入 */
     GPIOB->BSRR = (1U << 1);
 }
 
-/* 基于 CPU 主频的精确微秒延时 (不依赖SysTick，不受时钟切换影响) */
-static void ds18b20_delay_us(uint32_t us)
+/* 复位 */
+static void DS18B20_Reset(void)
 {
-    uint32_t hclk = HAL_RCC_GetHCLKFreq();
-    uint32_t loops_per_us = hclk / 4000000;  /* 每轮循环约4个时钟 */
-    uint32_t n = us * loops_per_us;
-    __asm volatile("1: subs %0, %0, #1; bne 1b" : "+r"(n));
+    DS18B20_IO_OUT();
+    GPIOB->BRR = (1U << 1);    /* 拉低 */
+    delay_us(750);
+    GPIOB->BSRR = (1U << 1);   /* 释放 */
+    delay_us(15);
 }
 
-/* 复位 (时序参数来自 ds18b20-latest) */
-static void ds18b20_reset(void)
-{
-    ds18b20_pin_out();
-    GPIOB->BRR = (1U << 1);         /* 拉低 */
-    ds18b20_delay_us(780);            /* 780μs (480~960) */
-    GPIOB->BSRR = (1U << 1);        /* 释放 */
-    ds18b20_delay_us(40);             /* 40μs (15~60) */
-}
-
-/* 检测存在脉冲 */
-static uint8_t ds18b20_connect(void)
+/* 检测存在脉冲, 返回 0=存在, 1=不存在 */
+static uint8_t DS18B20_Check(void)
 {
     uint8_t retry = 0;
-    ds18b20_pin_in();
-
-    while((GPIOB->IDR & (1U << 1)) && retry < 200) { retry++; ds18b20_delay_us(1); }
+    DS18B20_IO_IN();
+    while((GPIOB->IDR & (1U << 1)) && retry < 200) { retry++; delay_us(1); }
     if(retry >= 200) return 1;
-
     retry = 0;
-    while(!(GPIOB->IDR & (1U << 1)) && retry < 240) { retry++; ds18b20_delay_us(1); }
+    while(!(GPIOB->IDR & (1U << 1)) && retry < 240) { retry++; delay_us(1); }
     if(retry >= 240) return 1;
-
     return 0;
 }
 
 /* 读一个位 */
-static uint8_t ds18b20_read_bit(void)
+static uint8_t DS18B20_Read_Bit(void)
 {
     uint8_t data;
-    ds18b20_pin_out();
+    DS18B20_IO_OUT();
     GPIOB->BRR = (1U << 1);
-    ds18b20_delay_us(2);
+    delay_us(2);
     GPIOB->BSRR = (1U << 1);
-    ds18b20_pin_in();
-    ds18b20_delay_us(5);
+    DS18B20_IO_IN();
+    delay_us(12);
     data = (GPIOB->IDR & (1U << 1)) ? 1 : 0;
-    ds18b20_delay_us(50);
+    delay_us(50);
     return data;
 }
 
 /* 读一个字节 */
-static uint8_t ds18b20_read_byte(void)
+static uint8_t DS18B20_Read_Byte(void)
 {
     uint8_t i, j, dat = 0;
     for(i = 1; i <= 8; i++) {
-        j = ds18b20_read_bit();
+        j = DS18B20_Read_Bit();
         dat = (j << 7) | (dat >> 1);
     }
     return dat;
 }
 
 /* 写一个字节 */
-static void ds18b20_write_byte(uint8_t dat)
+static void DS18B20_Write_Byte(uint8_t dat)
 {
     uint8_t j, testb;
-    ds18b20_pin_out();
+    DS18B20_IO_OUT();
     for(j = 1; j <= 8; j++) {
         testb = dat & 0x01;
         dat >>= 1;
         if(testb) {
-            GPIOB->BRR = (1U << 1); ds18b20_delay_us(2);
-            GPIOB->BSRR = (1U << 1); ds18b20_delay_us(60);
+            GPIOB->BRR = (1U << 1); delay_us(2);
+            GPIOB->BSRR = (1U << 1); delay_us(60);
         } else {
-            GPIOB->BRR = (1U << 1); ds18b20_delay_us(60);
-            GPIOB->BSRR = (1U << 1); ds18b20_delay_us(2);
+            GPIOB->BRR = (1U << 1); delay_us(60);
+            GPIOB->BSRR = (1U << 1); delay_us(2);
         }
     }
 }
 
-/* 启动转换 */
-static void ds18b20_start(void)
+/* 启动温度转换 */
+static void DS18B20_Start(void)
 {
-    ds18b20_reset();
-    ds18b20_connect();
-    ds18b20_write_byte(0xCC);
-    ds18b20_write_byte(0x44);
+    DS18B20_Reset();
+    DS18B20_Check();
+    DS18B20_Write_Byte(0xCC);
+    DS18B20_Write_Byte(0x44);
 }
 
 /*
  * 读取温度
  * 返回: 0=成功, 1=传感器无响应
- * temp_x10: 温度 × 10 (如 253 = 25.3°C)
  */
 static uint8_t ds18b20_read_temp_x10(int32_t *temp_x10)
 {
     uint8_t TL, TH;
     int32_t tem;
 
-    ds18b20_start();
-    ds18b20_reset();
-    ds18b20_connect();
-    ds18b20_write_byte(0xCC);
-    ds18b20_write_byte(0xBE);
-    TL = ds18b20_read_byte();
-    TH = ds18b20_read_byte();
+    DS18B20_Start();
+    DS18B20_Reset();
+    DS18B20_Check();
+    DS18B20_Write_Byte(0xCC);
+    DS18B20_Write_Byte(0xBE);
+    TL = DS18B20_Read_Byte();
+    TH = DS18B20_Read_Byte();
 
     if(TH > 7) {
         TH = ~TH; TL = ~TL;
