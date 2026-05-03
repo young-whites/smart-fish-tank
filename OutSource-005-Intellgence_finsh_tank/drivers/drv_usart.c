@@ -377,7 +377,7 @@ static rt_err_t stm32_gpio_configure(struct stm32_uart_config *config)
 }
 
 
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+__WEAK void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 {
     /* if this uart is shell function */
     if(huart == &handle)

@@ -29,13 +29,13 @@ static void ds18b20_pin_in(void)
     GPIOB->BSRR = (1U << 13);
 }
 
-/* 基于 SysTick 的精确微秒延时 (移植自 rt_hw_us_delay) */
+/* 基于 CPU 主频的精确微秒延时 (不依赖SysTick，不受时钟切换影响) */
 static void ds18b20_delay_us(uint32_t us)
 {
-    uint32_t ticks_per_us = SysTick->LOAD / (1000000 / RT_TICK_PER_SECOND);
-    uint32_t start = SysTick->VAL;
-    uint32_t target = us * ticks_per_us;
-    while((start - SysTick->VAL) < target);
+    uint32_t hclk = HAL_RCC_GetHCLKFreq();
+    uint32_t loops_per_us = hclk / 4000000;  /* 每轮循环约4个时钟 */
+    uint32_t n = us * loops_per_us;
+    __asm volatile("1: subs %0, %0, #1; bne 1b" : "+r"(n));
 }
 
 /* 复位 (时序参数来自 ds18b20-latest) */

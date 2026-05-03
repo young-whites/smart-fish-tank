@@ -26,7 +26,7 @@
 
 /* 该头文件包含了所有CubeMX自动生成的初始化引脚 */
 
-
+#include "main.h"
 
 
 #endif /* APPLICATIONS_BSP_SYS_H_ */
