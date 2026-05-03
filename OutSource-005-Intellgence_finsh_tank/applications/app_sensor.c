@@ -217,7 +217,7 @@ static float calc_ph_value(uint16_t adc_val)
 /* ========== 传感器采集线程 ========== */
 
 static struct rt_thread sensor_thread;
-static rt_uint8_t sensor_stack[384];
+static rt_uint8_t sensor_stack[512];
 
 /* 传感器状态标志 */
 uint8_t g_sensor_temp_valid = 0;  /* 1=DS18B20在线且数据有效 */
