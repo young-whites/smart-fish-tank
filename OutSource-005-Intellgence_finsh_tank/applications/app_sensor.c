@@ -7,8 +7,6 @@
 
 /* ========== DS18B20 1-Wire (PB13) ========== */
 
-static uint8_t ds18b20_valid = 0;
-
 static void ds18b20_pin_out(void)
 {
     GPIOB->CRH &= ~(0xFU << 20);
