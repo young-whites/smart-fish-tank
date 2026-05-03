@@ -553,7 +553,7 @@ void oled_draw_mix_line(uint8_t page, const char *chinese_label, const char *asc
         const char *s = ascii_text;
         while (*s) {
             if (ax > OLED_WIDTH - 6) break;
-            oled_draw_char_offset(ax, page, *s, 2);
+            oled_draw_char_offset(ax, page, *s, 3);
             ax += 6;
             s++;
         }
