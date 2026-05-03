@@ -120,28 +120,25 @@ static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
 }
 
 /*
- * 读取温度 (完整 scratchpad 9字节 + CRC校验)
- * 返回: 0=成功, 1=传感器无响应, 2=CRC错误
+ * 读取温度 (与参考代码一致: 只读2字节)
+ * 返回: 0=成功, 1=传感器无响应
  */
 static uint8_t ds18b20_read_temp_raw(int16_t *temp_out)
 {
-    uint8_t sp[9];
-    uint8_t i;
+    uint8_t tl, th;
 
     /* Step 1: 启动转换 */
     ds18b20_start();
-    rt_thread_mdelay(750);      /* 12bit 转换需 ~750ms */
+    rt_thread_mdelay(750);
 
-    /* Step 2: 读取 scratchpad */
+    /* Step 2: 读取温度 (2字节) */
     if(ds18b20_reset()) return 1;
     ds18b20_write_byte(0xCC);   /* Skip ROM */
     ds18b20_write_byte(0xBE);   /* Read Scratchpad */
-    for(i = 0; i < 9; i++) sp[i] = ds18b20_read_byte();
+    tl = ds18b20_read_byte();   /* LSB */
+    th = ds18b20_read_byte();   /* MSB */
 
-    /* Step 3: CRC 校验 */
-    if(ds18b20_crc8(sp, 9) != 0) return 2;
-
-    *temp_out = (int16_t)((sp[1] << 8) | sp[0]);
+    *temp_out = (int16_t)((th << 8) | tl);
     return 0;
 }
 
