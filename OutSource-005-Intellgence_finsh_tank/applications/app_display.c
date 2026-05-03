@@ -51,11 +51,12 @@ static void draw_main_p0_data(void)
 
     oled_clear_region(0, 7, 0, 127);
 
-    if(g_sensor_temp_valid)
-        rt_snprintf(buf, sizeof(buf), "Temp:  %d.%02d C",
-                    (int)g_sensor.water_temp,
-                    ((int)(g_sensor.water_temp * 100)) % 100);
-    else
+    if(g_sensor_temp_valid) {
+        int ti = (int)g_sensor.water_temp;
+        int tf = ((int)(g_sensor.water_temp * 100)) % 100;
+        if(tf < 0) tf = -tf;
+        rt_snprintf(buf, sizeof(buf), "Temp:  %d.%02d C", ti, tf);
+    } else
         rt_snprintf(buf, sizeof(buf), "Temp:  --.- C");
     oled_draw_string(0, 0, buf);
 
@@ -65,9 +66,12 @@ static void draw_main_p0_data(void)
     rt_snprintf(buf, sizeof(buf), "Water: %d%%", g_sensor.water_level);
     oled_draw_string(0, 2, buf);
 
-    rt_snprintf(buf, sizeof(buf), "PH:    %d.%02d",
-                (int)g_sensor.ph_value,
-                ((int)(g_sensor.ph_value * 100)) % 100);
+    {
+        int pi = (int)g_sensor.ph_value;
+        int pf = ((int)(g_sensor.ph_value * 100)) % 100;
+        if(pf < 0) pf = -pf;
+        rt_snprintf(buf, sizeof(buf), "PH:    %d.%02d", pi, pf);
+    }
     oled_draw_string(0, 3, buf);
 
     draw_page_indicator();
@@ -138,17 +142,19 @@ static void draw_threshold_p0_data(void)
 
     oled_draw_string(0, 0, "-- Threshold Set --");
 
-    rt_snprintf(buf, sizeof(buf), "TempLow:%7.1fC%s",
-                g_threshold.temp_lower,
-                (edit_cursor == 0) ? " <<" : "");
+    rt_snprintf(buf, sizeof(buf), "TLo:%d.%dC %s",
+                (int)g_threshold.temp_lower,
+                ((int)(g_threshold.temp_lower * 10)) % 10,
+                (edit_cursor == 0) ? "<<" : "");
     oled_draw_string(0, 1, buf);
 
-    rt_snprintf(buf, sizeof(buf), "TempUp: %7.1fC%s",
-                g_threshold.temp_upper,
-                (edit_cursor == 1) ? " <<" : "");
+    rt_snprintf(buf, sizeof(buf), "THi:%d.%dC %s",
+                (int)g_threshold.temp_upper,
+                ((int)(g_threshold.temp_upper * 10)) % 10,
+                (edit_cursor == 1) ? "<<" : "");
     oled_draw_string(0, 2, buf);
 
-    rt_snprintf(buf, sizeof(buf), "AirMax: %7d  %s",
+    rt_snprintf(buf, sizeof(buf), "Air:%d %s",
                 g_threshold.air_quality_max,
                 (edit_cursor == 2) ? "<<" : "");
     oled_draw_string(0, 3, buf);
@@ -162,22 +168,24 @@ static void draw_threshold_p1_data(void)
 
     oled_clear_region(0, 3, 0, 127);
 
-    rt_snprintf(buf, sizeof(buf), "PH Low: %5.1f   %s",
-                g_threshold.ph_lower,
+    rt_snprintf(buf, sizeof(buf), "PHL:%d.%d %s",
+                (int)g_threshold.ph_lower,
+                ((int)(g_threshold.ph_lower * 10)) % 10,
                 (edit_cursor == 3) ? "<<" : "");
     oled_draw_string(0, 0, buf);
 
-    rt_snprintf(buf, sizeof(buf), "PH Up:  %5.1f   %s",
-                g_threshold.ph_upper,
+    rt_snprintf(buf, sizeof(buf), "PHH:%d.%d %s",
+                (int)g_threshold.ph_upper,
+                ((int)(g_threshold.ph_upper * 10)) % 10,
                 (edit_cursor == 4) ? "<<" : "");
     oled_draw_string(0, 1, buf);
 
-    rt_snprintf(buf, sizeof(buf), "WL Min: %4d%%  %s",
+    rt_snprintf(buf, sizeof(buf), "WLM:%d%% %s",
                 g_threshold.water_level_min,
                 (edit_cursor == 5) ? "<<" : "");
     oled_draw_string(0, 2, buf);
 
-    rt_snprintf(buf, sizeof(buf), "WL Max: %4d%%  %s",
+    rt_snprintf(buf, sizeof(buf), "WLX:%d%% %s",
                 g_threshold.water_level_max,
                 (edit_cursor == 6) ? "<<" : "");
     oled_draw_string(0, 3, buf);
@@ -364,7 +372,7 @@ static void partial_refresh(void)
 /* ===================== 线程 ===================== */
 
 static struct rt_thread display_thread;
-static rt_uint8_t display_stack[768];
+static rt_uint8_t display_stack[1024];
 
 static void display_thread_entry(void *param)
 {
@@ -404,3 +412,22 @@ void app_display_init(void)
         18, 10);
     rt_thread_startup(&display_thread);
 }
+
+#include <finsh.h>
+
+static void dpage(void)
+{
+    rt_kprintf("main_page=%d sub_page=%d cursor=%d changed=%d\n",
+               main_page, sub_page, edit_cursor, page_changed);
+}
+MSH_CMD_EXPORT(dpage, show display page state);
+
+static void dset(int p)
+{
+    main_page = p;
+    sub_page = 0;
+    edit_cursor = 0;
+    page_changed = 1;
+    rt_kprintf("page set to %d\n", p);
+}
+MSH_CMD_EXPORT(dset, set display page (0=main 1=thresh 2=manual));
