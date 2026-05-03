@@ -12,6 +12,7 @@
 #include "app_data.h"
 #include "app_key.h"
 #include "drv_oled.h"
+#include "app_sensor.h"
 #include "font_lib.h"
 #include <rtthread.h>
 #include <stdint.h>
@@ -62,10 +63,12 @@ static void draw_main_p0_data(void)
     char buf[24];
     uint8_t p;
 
-    /* 清除每行的数据区域 (col 32~127), 保留汉字 label */
     for (p = 0; p < 8; p++) clear_buf_region(p, p, 32, 127);
 
-    rt_snprintf(buf, sizeof(buf), "%.1fC", g_sensor.water_temp);
+    if(g_sensor_temp_valid)
+        rt_snprintf(buf, sizeof(buf), "%.2fC", g_sensor.water_temp);
+    else
+        rt_snprintf(buf, sizeof(buf), "--.-C");
     oled_draw_string(32, 0, buf);
 
     rt_snprintf(buf, sizeof(buf), "%d", g_sensor.air_quality);

@@ -5,21 +5,19 @@
 
 /* ========== DS18B20 1-Wire (PB13) ========== */
 
-/* PB13 配置为推挽输出 */
+static uint8_t ds18b20_valid = 0;  /* 1=传感器在线 */
+
 static void ds18b20_pin_out(void)
 {
-    /* CRH: PB8-PB15, PB13 -> CRH[23:20] */
     GPIOB->CRH &= ~(0xFU << 20);
-    GPIOB->CRH |=  (0x3U << 20);  /* MODE=11(50MHz), CNF=00(推挽输出) */
+    GPIOB->CRH |=  (0x3U << 20);
 }
 
-/* PB13 配置为上拉输入 */
 static void ds18b20_pin_in(void)
 {
-    /* MODE=00(输入), CNF=10(上拉/下拉输入) */
     GPIOB->CRH &= ~(0xFU << 20);
     GPIOB->CRH |=  (0x8U << 20);
-    GPIOB->BSRR = (1U << 13);  /* 上拉 */
+    GPIOB->BSRR = (1U << 13);
 }
 
 static void ds18b20_dq_high(void) { GPIOB->BSRR = (1U << 13); }
@@ -79,24 +77,50 @@ static uint8_t ds18b20_read_byte(void)
     return dat;
 }
 
-/* 读取温度，返回整数部分和小数部分(0-9) */
-static int16_t ds18b20_read_temp_raw(int16_t *frac)
+static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
 {
-    uint8_t tl, th;
-    int16_t temp;
-    if(ds18b20_reset()) { *frac = 0; return -999; }
+    uint8_t crc = 0;
+    uint8_t i, j;
+    for(i = 0; i < len; i++) {
+        crc ^= data[i];
+        for(j = 0; j < 8; j++) {
+            if(crc & 0x01) crc = (crc >> 1) ^ 0x8C;
+            else crc >>= 1;
+        }
+    }
+    return crc;
+}
+
+/*
+ * 读取温度 (完整 scratchpad 9字节 + CRC校验)
+ * 返回: 0=成功, 1=传感器无响应, 2=CRC错误
+ */
+static uint8_t ds18b20_read_temp_raw(int16_t *temp_out)
+{
+    uint8_t sp[9];
+    uint8_t i;
+
+    if(ds18b20_reset()) return 1;
     ds18b20_write_byte(0xCC);
     ds18b20_write_byte(0x44);
     rt_thread_mdelay(750);
-    if(ds18b20_reset()) { *frac = 0; return -999; }
+
+    if(ds18b20_reset()) return 1;
     ds18b20_write_byte(0xCC);
     ds18b20_write_byte(0xBE);
-    tl = ds18b20_read_byte();
-    th = ds18b20_read_byte();
-    temp = (int16_t)((th << 8) | tl);
-    /* temp * 0.0625 = temp / 16 */
-    *frac = ((temp & 0x0F) * 10) / 16;  /* 小数部分 0-9 */
-    return temp / 16;
+    for(i = 0; i < 9; i++) sp[i] = ds18b20_read_byte();
+
+    if(ds18b20_crc8(sp, 9) != 0) return 2;
+
+    *temp_out = (int16_t)((sp[1] << 8) | sp[0]);
+    return 0;
+}
+
+static float ds18b20_raw_to_float(int16_t raw)
+{
+    int16_t int_part = raw >> 4;
+    uint8_t frac_part = raw & 0x0F;
+    return (float)int_part + (float)frac_part * 0.0625f;
 }
 
 /* ========== ADC (CMSIS 寄存器) ========== */
@@ -130,24 +154,30 @@ static uint16_t adc_read_channel(uint8_t channel)
 static struct rt_thread sensor_thread;
 static rt_uint8_t sensor_stack[384];
 
+/* 传感器状态标志 */
+uint8_t g_sensor_temp_valid = 0;  /* 1=DS18B20在线且数据有效 */
+
 static void sensor_thread_entry(void *param)
 {
-    int16_t temp_int, temp_frac;
+    int16_t temp_raw;
     uint16_t adc_val;
 
-    /* 使能 GPIOB 时钟 (DS18B20 在 PB13) */
     RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
-
     adc_init();
 
     while(1) {
-        temp_int = ds18b20_read_temp_raw(&temp_frac);
-        if(temp_int > -50 && temp_int < 125) {
+        /* DS18B20 温度采集 (CRC校验) */
+        uint8_t ret = ds18b20_read_temp_raw(&temp_raw);
+        if(ret == 0 && temp_raw > (-50 << 4) && temp_raw < (125 << 4)) {
             rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
-            g_sensor.water_temp = (float)temp_int + (float)temp_frac * 0.1f;
+            g_sensor.water_temp = ds18b20_raw_to_float(temp_raw);
             rt_mutex_release(&mutex_data);
+            g_sensor_temp_valid = 1;
+        } else {
+            g_sensor_temp_valid = 0;  /* 传感器断线或CRC错误 */
         }
 
+        /* ADC 采集 */
         rt_mutex_take(&mutex_data, RT_WAITING_FOREVER);
         g_sensor.air_quality = adc_read_channel(ADC_AIR_CHANNEL);
         adc_val = adc_read_channel(ADC_WATER_CHANNEL);
