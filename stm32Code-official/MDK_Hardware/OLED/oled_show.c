@@ -355,7 +355,6 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	static uint8_t lastMode = 0xFF;
 
 	_ShowPageIndicator();
-	/* Show feed countdown on row2 when feeding, otherwise show title */
 	if (Flag.feeding) {
 		ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xce\xb9", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xca\xb3", 0);
@@ -419,7 +418,6 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	OLED_Show_OneCharF6X12(6, 66, '+');
 	OLED_Show_OneCharF6X12(6, 72, '/');
 	OLED_Show_OneCharF6X12(6, 78, '-');
-	/* Show manual timeout countdown when relay is ON */
 	if (Flag.relayHeat || Flag.relayFill || Flag.relayDrain || Flag.relayOxygen) {
 		OLED_ShowNumF6X12(6, 90, 2, (uint32_t)Flag.manualTimeout);
 		OLED_Show_OneCharF6X12(6, 102, 's');
