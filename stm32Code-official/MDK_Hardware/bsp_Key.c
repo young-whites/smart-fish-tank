@@ -218,7 +218,7 @@ static void _KEYB_Press(void)
 	}
 
 	uint8_t maxSub = 3;
-	if (Flag.currentPage == 1) maxSub = 4;
+	if (Flag.currentPage == 1) maxSub = 5;
 	if (Flag.currentPage == 2) maxSub = 4;
 
 	Flag.subPage++;
@@ -241,7 +241,10 @@ static void _KEYB_Press(void)
 static void _KEYC_Press(void)
 {
 	if (Flag.currentPage == 1) {  // Threshold page
-		if (Flag.thresholdField == 0) {  // Select lower: KEY3 increase
+		if (Flag.subPage == 4) {  // Feed interval
+			Record.feedInterval += 5;
+			if (Record.feedInterval > 300) Record.feedInterval = 300;  // Max 5 minutes
+		} else if (Flag.thresholdField == 0) {  // Select lower: KEY3 increase
 			switch (Flag.subPage) {
 				case 0: Record.tempLower += THRESHOLD_TEMP_STEP;
 					if (Record.tempLower > Record.tempUpper - 1.0f) Record.tempLower = Record.tempUpper - 1.0f; break;
@@ -288,7 +291,13 @@ static void _KEYC_LongPress(void)  // Long press 2s - mode switch
 static void _KEYD_Press(void)
 {
 	if (Flag.currentPage == 1) {  // Threshold page
-		if (Flag.thresholdField == 0) {  // Select lower: KEY4 decrease
+		if (Flag.subPage == 4) {  // Feed interval
+			if (Record.feedInterval >= 5) {
+				Record.feedInterval -= 5;
+			} else {
+				Record.feedInterval = 5;  // Min 5 seconds
+			}
+		} else if (Flag.thresholdField == 0) {  // Select lower: KEY4 decrease
 			switch (Flag.subPage) {
 				case 0: Record.tempLower -= THRESHOLD_TEMP_STEP;
 					if (Record.tempLower < 0.0f) Record.tempLower = 0.0f; break;

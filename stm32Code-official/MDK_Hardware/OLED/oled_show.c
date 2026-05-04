@@ -341,6 +341,34 @@ static void _Threshold_Sub3(void)
 	OLED_Show_OneCharF6X12(6, 102, 'w');
 }
 
+/* Sub 2-5: Feed interval */
+static void _Threshold_Sub4(void)
+{
+	_ShowPageIndicator();
+	/* Row2: Feed interval */
+	OLED_Show_OneCharF6X12(2, 0,  'F');
+	OLED_Show_OneCharF6X12(2, 6,  'e');
+	OLED_Show_OneCharF6X12(2, 12, 'e');
+	OLED_Show_OneCharF6X12(2, 18, 'd');
+	OLED_Show_OneCharF6X12(2, 24, ':');
+	OLED_ShowNumF6X12(2, 30, 3, (uint32_t)Record.feedInterval);
+	OLED_Show_OneCharF6X12(2, 48, 's');
+
+	/* Row6: key hints */
+	OLED_Show_OneCharF6X12(6, 0,  'K');
+	OLED_Show_OneCharF6X12(6, 6,  '3');
+	OLED_Show_OneCharF6X12(6, 12, ':');
+	OLED_Show_OneCharF6X12(6, 18, '+');
+	OLED_Show_OneCharF6X12(6, 24, '5');
+	OLED_Show_OneCharF6X12(6, 30, 's');
+	OLED_Show_OneCharF6X12(6, 42, 'K');
+	OLED_Show_OneCharF6X12(6, 48, '4');
+	OLED_Show_OneCharF6X12(6, 54, ':');
+	OLED_Show_OneCharF6X12(6, 60, '-');
+	OLED_Show_OneCharF6X12(6, 66, '5');
+	OLED_Show_OneCharF6X12(6, 72, 's');
+}
+
 /* ================================================================
  *  主页面 3 - 手动控制
  * ================================================================ */
@@ -449,6 +477,7 @@ void OLED_Show_Page(uint8_t page)
 				case 1: _Threshold_Sub1(); break;
 				case 2: _Threshold_Sub2(); break;
 				case 3: _Threshold_Sub3(); break;
+				case 4: _Threshold_Sub4(); break;
 				default: _Threshold_Sub0(); break;
 			}
 			break;
