@@ -5,8 +5,8 @@
 
 /*******************************************************************************
 * FunctionName   : void IWDG_Init(uint8_t prer, uint16_t rlr)
-* Description    : ¶ÀÁ¢¿´ÃÅ¹·³õÊ¼»¯º¯Êı
-* Notice         : prer ·ÖÆµ   rlrÖØÔØÖµ  Ö÷Ê±ÖÓ 40K
+* Description    : ç‹¬ç«‹çœ‹é—¨ç‹—åˆå§‹åŒ–å‡½æ•°
+* Notice         : prer åˆ†é¢‘   rlré‡è½½å€¼  ä¸»æ—¶é’Ÿ 40K
 * Param[in]      : None
 * Output         : None
 * Return         : None
@@ -26,7 +26,7 @@ void IWDG_Init(uint8_t prer, uint16_t rlr)
 }
 /*******************************************************************************
 * FunctionName   : void IWDG_Feed(void)
-* Description    : ¶ÀÁ¢¿´ÃÅ¹·Î¹¹·
+* Description    : ç‹¬ç«‹çœ‹é—¨ç‹—å–‚ç‹—
 * Notice         : None
 * Param[in]      : None
 * Output         : None

@@ -129,6 +129,18 @@ static void GENERAL_TIM_3_Mode_Config(void)
 	// Enable timer update interrupt
 	TIM_ITConfig(GENERAL_TIM_3, TIM_IT_Update, ENABLE);
 
+	/* Configure TIM3 CH1 for PWM output (servo on PA6) */
+	{
+		TIM_OCInitTypeDef TIM_OCInitStructure;
+		TIM_OCStructInit(&TIM_OCInitStructure);
+		TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+		TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+		TIM_OCInitStructure.TIM_Pulse = 1500;  /* Default 1.5ms = 90 degrees */
+		TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+		TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+		TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	}
+
 	// Enable counter
 	TIM_Cmd(GENERAL_TIM_3, DISABLE);
 }

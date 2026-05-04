@@ -11,13 +11,13 @@
 
 #if FireUSART1_ENABLE
 
-// ´®¿Ú1-USART1
+// ä¸²å£1-USART1
 #define  DEBUG_USART_1                   USART1
 #define  DEBUG_USART1_CLK                RCC_APB2Periph_USART1
 #define  DEBUG_USART1_APBxClkCmd         RCC_APB2PeriphClockCmd
 #define  DEBUG_USART1_BAUDRATE           9600
 
-// USART GPIO Òı½Åºê¶¨Òå
+// USART GPIO å¼•è„šå®å®šä¹‰
 #define  DEBUG_USART1_GPIO_CLK           (RCC_APB2Periph_GPIOA)
 #define  DEBUG_USART1_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
 
@@ -30,7 +30,7 @@
 #define  DEBUG_USART1_IRQHandler         USART1_IRQHandler
 
 
-/* º¯ÊıÉùÃ÷ */
+/* å‡½æ•°å£°æ˜ */
 void FireUSART_1_Config(void);
 
 
@@ -41,13 +41,13 @@ void FireUSART_1_Config(void);
 
 #if FireUSART3_ENABLE
 
-// ´®¿Ú3-USART3
+// ä¸²å£3-USART3
 #define  DEBUG_USART_3                   USART3
 #define  DEBUG_USART3_CLK                RCC_APB1Periph_USART3
 #define  DEBUG_USART3_APBxClkCmd         RCC_APB1PeriphClockCmd
 #define  DEBUG_USART3_BAUDRATE           9600
 
-// USART GPIO Òı½Åºê¶¨Òå
+// USART GPIO å¼•è„šå®å®šä¹‰
 #define  DEBUG_USART3_GPIO_CLK           (RCC_APB2Periph_GPIOB)
 #define  DEBUG_USART3_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
 
@@ -60,28 +60,11 @@ void FireUSART_1_Config(void);
 #define  DEBUG_USART3_IRQHandler         USART3_IRQHandler
 
 
-/* º¯ÊıÉùÃ÷ */
+/* å‡½æ•°å£°æ˜ */
 void FireUSART_3_Config(void);
 
 
 #endif /*FireUSART3_ENABLE*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

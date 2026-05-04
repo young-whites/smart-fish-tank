@@ -63,20 +63,28 @@ void Timing_1s(void)
 	}
 
 	/* Feed control */
-	if (Flag.feeding == 1) {
-		if (Record.feedCountdown > 30 - 3) {
-			/* First 3 seconds: servo open */
-			Servo_SetAngle(90);
+	{
+		static uint8_t servoOpenSec = 0;  /* Seconds servo has been open */
+
+		if (Flag.feeding == 1) {
+			if (Record.feedCountdown > 0) {
+				Record.feedCountdown--;
+				if (servoOpenSec < 3) {
+					/* First 3 seconds: servo open */
+					Servo_SetAngle(90);
+					servoOpenSec++;
+				} else {
+					/* After 3 seconds: servo close, wait for countdown */
+					Servo_SetAngle(0);
+				}
+			}
+			if (Record.feedCountdown == 0) {
+				Flag.feeding = 0;
+				Servo_SetAngle(0);
+				servoOpenSec = 0;
+			}
 		} else {
-			/* After 3 seconds: servo close */
-			Servo_SetAngle(0);
-		}
-		if (Record.feedCountdown > 0) {
-			Record.feedCountdown--;
-		}
-		if (Record.feedCountdown == 0) {
-			Flag.feeding = 0;
-			Servo_SetAngle(0);
+			servoOpenSec = 0;
 		}
 	}
 }
@@ -99,32 +107,42 @@ void Timing_2ms(void)
 
 void Timing_5ms(void)
 {
-	/* ADC polling acquisition (Water level, PH, Air quality) */
+	/* ADC non-blocking polling: check EOC, skip if not ready */
 	static uint8_t adcCh = 0;
-	switch (adcCh) {
-		case 0: /* Water level PA1 ADC1_IN1 */
-			ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
-			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
-			Record.waterLevel = (uint8_t)(ADC_GetConversionValue(ADC1) * 100 / 4095);
-			if (Record.waterLevel > 100) Record.waterLevel = 100;
-			break;
-		case 1: /* PH PA0 ADC1_IN0 */
-			ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5);
-			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
-			Record.phValue = ADC_GetConversionValue(ADC1) * 14.0f / 4095.0f;
-			if (Record.phValue > 14.0f) Record.phValue = 14.0f;
-			if (Record.phValue < 0.0f) Record.phValue = 0.0f;
-			break;
-		case 2: /* Air quality PA4 ADC1_IN4 */
-			ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5);
-			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
-			Record.airQuality = ADC_GetConversionValue(ADC1);
-			break;
+	static uint8_t adcPending = 0;  /* 0=idle, 1=conversion started */
+
+	if (!adcPending) {
+		/* Start conversion for current channel */
+		switch (adcCh) {
+			case 0: ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5); break;  /* Water level PA1 */
+			case 1: ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5); break;  /* PH PA0 */
+			case 2: ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5); break;  /* Air quality PA4 */
+		}
+		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
+		adcPending = 1;
+	} else {
+		/* Check if conversion complete */
+		if (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC)) {
+			uint16_t val = ADC_GetConversionValue(ADC1);
+			switch (adcCh) {
+				case 0:
+					Record.waterLevel = (uint8_t)(val * 100.0f / 4095.0f);
+					if (Record.waterLevel > 100) Record.waterLevel = 100;
+					break;
+				case 1:
+					Record.phValue = val * 14.0f / 4095.0f;
+					if (Record.phValue > 14.0f) Record.phValue = 14.0f;
+					if (Record.phValue < 0.0f) Record.phValue = 0.0f;
+					break;
+				case 2:
+					Record.airQuality = val;
+					break;
+			}
+			adcCh = (adcCh + 1) % 3;
+			adcPending = 0;
+		}
+		/* If EOC not set, skip this cycle - will retry next 5ms */
 	}
-	adcCh = (adcCh + 1) % 3;
 }
 
 

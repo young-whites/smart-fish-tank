@@ -2,7 +2,7 @@
 #define __SYS_H	
 #include "stm32f10x.h"
 
-/* 标准库头文件 */
+/* 鏍囧噯搴撳ご鏂囦欢 */
 #include <stdbool.h>
 #include <stdio.h>
 #include <math.h>
@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-/* 自定义头文件 */
+/* 鑷畾涔夊ご鏂囦欢 */
 #include "bsp_led.h"
 #include "systick_delay.h"
 #include "bsp_beep.h" 
