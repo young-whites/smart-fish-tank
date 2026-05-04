@@ -15,13 +15,13 @@ void KEY_GPIO_Config(void)
 	/* KEY1 PA8 Pull-down input */
 	macKEY_A_GPIO_APBxClock_FUN(macKEY_A_GPIO_CLK, ENABLE);
 	GPIO_InitStructure.GPIO_Pin = macKEY_A_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;    // Pull-down input
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;    // Pull-down input
 	GPIO_Init(macKEY_A_GPIO_PORT, &GPIO_InitStructure);
 
 	/* KEY2 PB3 Pull-down input (need to disable JTAG, enable SWD) */
 	macKEY_B_GPIO_APBxClock_FUN(macKEY_B_GPIO_CLK, ENABLE);
 	GPIO_InitStructure.GPIO_Pin = macKEY_B_GPIO_PIN | macKEY_C_GPIO_PIN | macKEY_D_GPIO_PIN | macKEY_E_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;    // Pull-down input
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;    // Pull-down input
 	GPIO_Init(macKEY_B_GPIO_PORT, &GPIO_InitStructure);
 
 
@@ -165,11 +165,11 @@ uint8_t KEY_GetState(uint8_t keyName)
 	uint8_t	stat = 0;
 	switch (keyName)
 	{
-		case KEY_A:		stat = (GPIO_ReadInputDataBit(macKEY_A_GPIO_PORT, macKEY_A_GPIO_PIN) ? 1 : 0);	break;	// PA8
-		case KEY_B:		stat = (GPIO_ReadInputDataBit(macKEY_B_GPIO_PORT, macKEY_B_GPIO_PIN) ? 1 : 0);	break;	// PB3
-		case KEY_C:		stat = (GPIO_ReadInputDataBit(macKEY_C_GPIO_PORT, macKEY_C_GPIO_PIN) ? 1 : 0);	break;	// PB4
-		case KEY_D:		stat = (GPIO_ReadInputDataBit(macKEY_D_GPIO_PORT, macKEY_D_GPIO_PIN) ? 1 : 0);	break;	// PB8
-		case KEY_E:		stat = (GPIO_ReadInputDataBit(macKEY_E_GPIO_PORT, macKEY_E_GPIO_PIN) ? 1 : 0);	break;	// PB1
+		case KEY_A:		stat = (GPIO_ReadInputDataBit(macKEY_A_GPIO_PORT, macKEY_A_GPIO_PIN) ? 0 : 1);	break;	// PA8
+		case KEY_B:		stat = (GPIO_ReadInputDataBit(macKEY_B_GPIO_PORT, macKEY_B_GPIO_PIN) ? 0 : 1);	break;	// PB3
+		case KEY_C:		stat = (GPIO_ReadInputDataBit(macKEY_C_GPIO_PORT, macKEY_C_GPIO_PIN) ? 0 : 1);	break;	// PB4
+		case KEY_D:		stat = (GPIO_ReadInputDataBit(macKEY_D_GPIO_PORT, macKEY_D_GPIO_PIN) ? 0 : 1);	break;	// PB8
+		case KEY_E:		stat = (GPIO_ReadInputDataBit(macKEY_E_GPIO_PORT, macKEY_E_GPIO_PIN) ? 0 : 1);	break;	// PB1
 	}
 	return stat;
 }

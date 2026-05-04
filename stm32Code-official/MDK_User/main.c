@@ -138,11 +138,11 @@ int main ( void )
 				uint8_t k3 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4);
 				uint8_t k4 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8);
 				uint8_t k5 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1);
-				OLED_Show_OneCharF6X12(0, 30, k1 ? '1' : '0');
-				OLED_Show_OneCharF6X12(0, 42, k2 ? '1' : '0');
-				OLED_Show_OneCharF6X12(0, 54, k3 ? '1' : '0');
-				OLED_Show_OneCharF6X12(0, 66, k4 ? '1' : '0');
-				OLED_Show_OneCharF6X12(0, 78, k5 ? '1' : '0');
+				OLED_Show_OneCharF6X12(0, 30, k1 ? '0' : '1');
+				OLED_Show_OneCharF6X12(0, 42, k2 ? '0' : '1');
+				OLED_Show_OneCharF6X12(0, 54, k3 ? '0' : '1');
+				OLED_Show_OneCharF6X12(0, 66, k4 ? '0' : '1');
+				OLED_Show_OneCharF6X12(0, 78, k5 ? '0' : '1');
 			}
 
 			/* Refresh OLED display */
