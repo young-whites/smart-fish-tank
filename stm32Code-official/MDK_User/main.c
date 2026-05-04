@@ -131,6 +131,20 @@ int main ( void )
 				OLED_Clr_Screen();
 			}
 
+			/* Key debug: show GPIO states on OLED row0 */
+			{
+				uint8_t k1 = GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8);
+				uint8_t k2 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_3);
+				uint8_t k3 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4);
+				uint8_t k4 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8);
+				uint8_t k5 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1);
+				OLED_Show_OneCharF6X12(0, 30, k1 ? '1' : '0');
+				OLED_Show_OneCharF6X12(0, 42, k2 ? '1' : '0');
+				OLED_Show_OneCharF6X12(0, 54, k3 ? '1' : '0');
+				OLED_Show_OneCharF6X12(0, 66, k4 ? '1' : '0');
+				OLED_Show_OneCharF6X12(0, 78, k5 ? '1' : '0');
+			}
+
 			/* Refresh OLED display */
 			OLED_Show_Page(Flag.currentPage);
 
