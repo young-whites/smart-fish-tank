@@ -50,17 +50,7 @@ void Timing_1s(void)
 		Flag.manualTimeout = 60;
 	}
 
-	/* DS18B20 read with fault detection */
-	{
-		float t = DS18B20_GetTemperture();
-		/* DS18B20 returns 85.0 on power-up error, -127.0 on read failure */
-		if (t > -50.0f && t < 125.0f) {
-			Record.waterTemp = t;
-			Flag.sensorError &= ~0x01;  /* Clear DS18B20 error */
-		} else {
-			Flag.sensorError |= 0x01;   /* Set DS18B20 error */
-		}
-	}
+	/* DS18B20 read moved to main loop to avoid ISR blocking */
 
 	/* Feed control */
 	{

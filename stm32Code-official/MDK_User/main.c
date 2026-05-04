@@ -98,6 +98,21 @@ int main ( void )
 
 		while ( 1 )
 		{
+			/* DS18B20 read with fault detection (outside ISR to avoid blocking) */
+			{
+				static uint32_t dsReadCnt = 0;
+				if (++dsReadCnt >= 100) {  /* Every ~10s at 100ms loop */
+					dsReadCnt = 0;
+					float t = DS18B20_GetTemperture();
+					if (t > -50.0f && t < 125.0f) {
+						Record.waterTemp = t;
+						Flag.sensorError &= ~0x01;
+					} else {
+						Flag.sensorError |= 0x01;
+					}
+				}
+			}
+
 			/* Fill/Drain mutual exclusion safety */
 			if (Flag.relayFill && Flag.relayDrain) {
 				Flag.relayDrain = 0;  /* Drain takes priority */

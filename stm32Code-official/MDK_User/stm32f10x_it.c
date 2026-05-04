@@ -95,18 +95,6 @@ void SysTick_Handler(void)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 /**
   * @brief  This function handles Basic TIM6 interrupt request.
   * @param  None
