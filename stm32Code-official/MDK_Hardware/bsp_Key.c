@@ -255,8 +255,8 @@ static void _KEYC_Press(void)
 			switch (Flag.subPage) {
 				case 0: Record.tempUpper += THRESHOLD_TEMP_STEP;
 					if (Record.tempUpper > 50.0f) Record.tempUpper = 50.0f; break;
-				case 1: Record.airQualityMax += THRESHOLD_AIR_STEP;
-					if (Record.airQualityMax > 999) Record.airQualityMax = 999; break;
+				case 1: Record.airQualityMax += 1;
+					if (Record.airQualityMax > 20) Record.airQualityMax = 20; break;
 				case 2: Record.waterLevelMax += THRESHOLD_WL_STEP;
 					if (Record.waterLevelMax > 100) Record.waterLevelMax = 100; break;
 				case 3: Record.phUpper += THRESHOLD_PH_STEP;
@@ -304,7 +304,7 @@ static void _KEYD_Press(void)
 				case 0: Record.tempUpper -= THRESHOLD_TEMP_STEP;
 					if (Record.tempUpper < Record.tempLower + 1.0f) Record.tempUpper = Record.tempLower + 1.0f; break;
 				case 1: if (Record.airQualityMax >= THRESHOLD_AIR_STEP)
-						Record.airQualityMax -= THRESHOLD_AIR_STEP;
+						Record.airQualityMax -= 1;
 					else Record.airQualityMax = 0; break;
 				case 2: Record.waterLevelMax -= THRESHOLD_WL_STEP;
 					if (Record.waterLevelMax < Record.waterLevelMin + 1) Record.waterLevelMax = Record.waterLevelMin + 1; break;

@@ -122,7 +122,17 @@ void Timing_5ms(void)
 		ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5);
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 		{ uint16_t _to=1000; while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) && --_to); }
-		Record.airQuality = ADC_GetConversionValue(ADC1);
+		{
+				uint16_t raw = ADC_GetConversionValue(ADC1);
+				/* MQ-135: default ~40=clean air(20), max ~2000=heavy pollution(0) */
+				if (raw <= 40) {
+					Record.airQuality = 20;
+				} else if (raw >= 2000) {
+					Record.airQuality = 0;
+				} else {
+					Record.airQuality = (uint16_t)(20.0f - (raw - 40) * 20.0f / 1960.0f);
+				}
+			}
 	}
 }
 
@@ -167,7 +177,7 @@ void Timing_500ms(void)
 		}
 
 		/* Air quality control */
-		if (Record.airQuality > Record.airQualityMax) {
+		if (Record.airQuality < Record.airQualityMax) {
 			Flag.relayOxygen = 1;
 		} else {
 			Flag.relayOxygen = 0;
@@ -179,7 +189,7 @@ void Timing_500ms(void)
 		uint8_t alarm = 0;
 		if (Record.waterTemp < Record.tempLower || Record.waterTemp > Record.tempUpper) alarm = 1;
 		if (Record.waterLevel < Record.waterLevelMin || Record.waterLevel > Record.waterLevelMax) alarm = 1;
-		if (Record.airQuality > Record.airQualityMax) alarm = 1;
+		if (Record.airQuality < Record.airQualityMax) alarm = 1;
 		if (Record.phValue < Record.phLower || Record.phValue > Record.phUpper) alarm = 1;
 
 		if (alarm && Flag.alarmEnable) {

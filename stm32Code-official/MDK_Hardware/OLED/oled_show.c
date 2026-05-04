@@ -171,10 +171,11 @@ static void _Main_Sub1(void)
 	OLED_ShowNumF6X12(2, 30, 3, (uint32_t)Record.waterLevel);
 	OLED_Show_OneCharF6X12(2, 48, '%');
 	/* row2右: 空气 */
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 66,  (uint8_t*)"\xbf\xd5", 0);
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 78,  (uint8_t*)"\xc6\xf8", 0);
-	OLED_Show_OneCharF6X12(2, 90, ':');
-	OLED_ShowNumF6X12(2, 96, 4, (uint32_t)Record.airQuality);
+	OLED_Show_OneCharF6X12(2, 66, 'A');
+	OLED_Show_OneCharF6X12(2, 72, 'Q');
+	OLED_Show_OneCharF6X12(2, 78, 'I');
+	OLED_Show_OneCharF6X12(2, 84, ':');
+	OLED_ShowNumF6X12(2, 90, 2, (uint32_t)Record.airQuality);
 	/* row6: 加热+加水 */
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 0,  (uint8_t*)"\xbc\xd3", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 12, (uint8_t*)"\xc8\xc8", 0);
@@ -252,10 +253,11 @@ static void _Threshold_Sub0(void)
 static void _Threshold_Sub1(void)
 {
 	_ShowPageIndicator();
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xbf\xd5", 0);
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xc6\xf8", 0);
-	OLED_Show_OneCharF6X12(2, 24, ':');
-	OLED_ShowNumF6X12(2, 30, 4, (uint32_t)Record.airQualityMax);
+	OLED_Show_OneCharF6X12(2, 0, 'A');
+	OLED_Show_OneCharF6X12(2, 6, 'Q');
+	OLED_Show_OneCharF6X12(2, 12, 'I');
+	OLED_Show_OneCharF6X12(2, 18, ':');
+	OLED_ShowNumF6X12(2, 24, 2, (uint32_t)Record.airQualityMax);
 
 	OLED_Show_OneCharF6X12(4, 0, '>');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xc9\xcf", 0);
@@ -268,7 +270,7 @@ static void _Threshold_Sub1(void)
 	OLED_Show_OneCharF6X12(6, 6,  '3');
 	OLED_Show_OneCharF6X12(6, 12, '+');
 	OLED_Show_OneCharF6X12(6, 18, '1');
-	OLED_Show_OneCharF6X12(6, 24, '0');
+	OLED_Show_OneCharF6X12(6, 24, ' ');
 	OLED_Show_OneCharF6X12(6, 36, 'K');
 	OLED_Show_OneCharF6X12(6, 42, '4');
 	OLED_Show_OneCharF6X12(6, 48, '-');

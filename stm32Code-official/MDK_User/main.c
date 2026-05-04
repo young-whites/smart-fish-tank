@@ -74,12 +74,12 @@ int main ( void )
 	Record.waterTemp = 0.0f;
 	Record.phValue = 7.2f;
 	Record.waterLevel = 65;
-	Record.airQuality = 230;
+	Record.airQuality = 20;
 	Record.runMode = 0;
 	Record.feedCountdown = 0;
 	Record.tempLower = 20.0f;
 	Record.tempUpper = 30.0f;
-	Record.airQualityMax = 500;
+	Record.airQualityMax = 15;
 	Record.phLower = 6.5f;
 	Record.phUpper = 8.5f;
 	Record.waterLevelMin = 40;
