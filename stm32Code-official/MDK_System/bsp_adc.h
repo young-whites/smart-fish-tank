@@ -14,30 +14,30 @@
 
 
 /***************************************************************************************************************/
-/*                                      ¶àÍ¨µÀDMA´«Êä                                                          */
-/*                       ADC1 ¶ÔÓ¦ DMA1Í¨µÀ1£¬ADC3¶ÔÓ¦DMA2Í¨µÀ5£¬ADC2Ã»ÓÐDMA¹¦ÄÜ                               */ 
+/*                                      ï¿½ï¿½Í¨ï¿½ï¿½DMAï¿½ï¿½ï¿½ï¿½                                                          */
+/*                       ADC1 ï¿½ï¿½Ó¦ DMA1Í¨ï¿½ï¿½1ï¿½ï¿½ADC3ï¿½ï¿½Ó¦DMA2Í¨ï¿½ï¿½5ï¿½ï¿½ADC2Ã»ï¿½ï¿½DMAï¿½ï¿½ï¿½ï¿½                               */ 
 /***************************************************************************************************************/
 
 #if MULTI_CHANNEL
-/********************ADC1ÊäÈëÍ¨µÀ£¨Òý½Å£©ÅäÖÃ**************************/
+/********************ADC1ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½ï¿½ï¿½**************************/
 #define    ADCx_1_APBxClock_FUN        RCC_APB2PeriphClockCmd
 #define    ADCx_1_CLK                  RCC_APB2Periph_ADC1
 #define    ADCx_1_DMA_CLK              RCC_AHBPeriph_DMA1
 
 
-// ×ª»»Í¨µÀ¸öÊý
+// ×ªï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #define    NOFCHANEL					2
-// ADCÑ¡Ôñºê¶¨Òå
+// ADCÑ¡ï¿½ï¿½ê¶¨ï¿½ï¿½
 #define    ADCx_1                       ADC1
-/* GPIOA_Pin1 µÄDMAÒý½Å¶ÔÓ¦Í¨µÀºê¶¨Òå *************/
+/* GPIOA_Pin1 ï¿½ï¿½DMAï¿½ï¿½ï¿½Å¶ï¿½Ó¦Í¨ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ *************/
 #define    ADC_GPIOA_PIN1				GPIO_Pin_1
 #define    ADC_GPIOA_PIN1_CHANNEL		ADC_Channel_1
 #define    ADC_DMA_CHANNEL				DMA1_Channel1
-/* GPIOA_Pin2 µÄDMAÒý½Å¶ÔÓ¦Í¨µÀºê¶¨Òå *************/
+/* GPIOA_Pin2 ï¿½ï¿½DMAï¿½ï¿½ï¿½Å¶ï¿½Ó¦Í¨ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ *************/
 #define    ADC_GPIOA_PIN2				GPIO_Pin_2
 #define    ADC_GPIOA_PIN2_CHANNEL		ADC_Channel_2
 #define    ADC_DMA_CHANNEL				DMA1_Channel1
-/* GPIOA_Pin4 µÄDMAÒý½Å¶ÔÓ¦Í¨µÀºê¶¨Òå *************/
+/* GPIOA_Pin4 ï¿½ï¿½DMAï¿½ï¿½ï¿½Å¶ï¿½Ó¦Í¨ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ *************/
 #define    ADC_GPIOA_PIN4				GPIO_Pin_4
 #define    ADC_GPIOA_PIN4_CHANNEL		ADC_Channel_4
 #define    ADC_DMA_CHANNEL				DMA1_Channel1
@@ -54,19 +54,19 @@ void ADC_GPIO_Mode_Config(void);
 
 
 /***************************************************************************************************************/
-/*                                      µ¥Í¨µÀDMA´«Êä                                                          */
-/*                       ADC1 ¶ÔÓ¦ DMA1Í¨µÀ1£¬ADC3¶ÔÓ¦DMA2Í¨µÀ5£¬ADC2Ã»ÓÐDMA¹¦ÄÜ                               */
+/*                                      ï¿½ï¿½Í¨ï¿½ï¿½DMAï¿½ï¿½ï¿½ï¿½                                                          */
+/*                       ADC1 ï¿½ï¿½Ó¦ DMA1Í¨ï¿½ï¿½1ï¿½ï¿½ADC3ï¿½ï¿½Ó¦DMA2Í¨ï¿½ï¿½5ï¿½ï¿½ADC2Ã»ï¿½ï¿½DMAï¿½ï¿½ï¿½ï¿½                               */
 /***************************************************************************************************************/
 #if SINGLE_CHANNEL
 
-/****************************** ADC1 ÅäÖÃ²ÎÊý¶¨Òå***************************************/
+/****************************** ADC1 ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½***************************************/
 #define	   ADCx_1_APBxClock_FUN								RCC_APB2PeriphClockCmd
 #define	   ADCx_1_CLK										RCC_APB2Periph_ADC1
 
 
 
 
-/* GPIOA_Pin1 µÄDMAÒý½Å¶ÔÓ¦Í¨µÀºê¶¨Òå *************/
+/* GPIOA_Pin1 ï¿½ï¿½DMAï¿½ï¿½ï¿½Å¶ï¿½Ó¦Í¨ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ *************/
 #define    ADC_GPIOA_PIN1				GPIO_Pin_1
 #define    ADC_GPIOA_PIN1_CHANNEL		ADC_Channel_1
 #define    ADC_DMA_CHANNEL				DMA1_Channel1
@@ -90,6 +90,7 @@ void ADC_DMA_GPIO_MODE_Config(void);
 
 
 
+void ADC_Polling_Init(void);
 uint16_t ADC_ReadChannel(uint8_t channel);
 
 #endif /*__BSP_ADC_H*/

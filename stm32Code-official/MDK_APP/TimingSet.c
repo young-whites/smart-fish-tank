@@ -3,6 +3,7 @@
 #include "bsp_Key.h"
 #include "ds18b20.h"
 #include "bsp_beep.h"
+#include "bsp_adc.h"
 
 extern void OLED_Show_Page(uint8_t page);
 extern void OLED_Clr_Screen(void);

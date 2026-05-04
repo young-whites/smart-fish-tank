@@ -25,7 +25,7 @@ int main ( void )
 	KEY_GPIO_Config();
 	OLED_Init();
 	DS18B20_Init();
-	ADC_DMA_GPIO_MODE_Config();
+	ADC_Polling_Init();
 
 	/* 继电器 GPIO 初始化 */
 	{
