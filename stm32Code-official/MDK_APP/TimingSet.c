@@ -106,14 +106,14 @@ void Timing_5ms(void)
 		/* Read water level PA1 (Channel 1) */
 		ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-		while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+		{ uint16_t _to=1000; while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) && --_to); }
 		Record.waterLevel = (uint8_t)(ADC_GetConversionValue(ADC1) * 100.0f / 4095.0f);
 		if (Record.waterLevel > 100) Record.waterLevel = 100;
 
 		/* Read PH PA0 (Channel 0) */
 		ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5);
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-		while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+		{ uint16_t _to=1000; while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) && --_to); }
 		Record.phValue = ADC_GetConversionValue(ADC1) * 14.0f / 4095.0f;
 		if (Record.phValue > 14.0f) Record.phValue = 14.0f;
 		if (Record.phValue < 0.0f) Record.phValue = 0.0f;
@@ -121,7 +121,7 @@ void Timing_5ms(void)
 		/* Read air quality PA4 (Channel 4) */
 		ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5);
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-		while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+		{ uint16_t _to=1000; while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) && --_to); }
 		Record.airQuality = ADC_GetConversionValue(ADC1);
 	}
 }

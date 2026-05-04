@@ -35,6 +35,9 @@ void ADC_Polling_Init(void)
     /* Enable ADC1 */
     ADC_Cmd(ADC1, ENABLE);
 
+    /* ADC stabilization delay (at least 1us per datasheet) */
+    { volatile uint32_t d; for(d=0; d<1000; d++); }
+
     /* Calibration */
     ADC_ResetCalibration(ADC1);
     while (ADC_GetResetCalibrationStatus(ADC1));
