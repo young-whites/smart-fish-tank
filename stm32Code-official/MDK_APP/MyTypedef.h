@@ -16,6 +16,7 @@ typedef struct
     uint8_t    relayDrain;        // Drain relay
     uint8_t    relayOxygen;       // Oxygen relay
     uint8_t    sensorError;       // Sensor error flags: bit0=DS18B20, bit1=ADC
+    uint16_t   manualTimeout;     // Manual relay safety timeout counter (seconds), 0=disabled
 }  Flag_StructType;
 extern   Flag_StructType Flag;
 

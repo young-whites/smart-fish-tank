@@ -57,6 +57,7 @@ int main ( void )
 	Flag.relayDrain = 0;
 	Flag.relayOxygen = 0;
 	Flag.sensorError = 0;
+	Flag.manualTimeout = 60;
 
 	Record.waterTemp = 0.0f;
 	Record.phValue = 7.2f;
@@ -87,6 +88,11 @@ int main ( void )
 
 		while ( 1 )
 		{
+			/* Fill/Drain mutual exclusion safety */
+			if (Flag.relayFill && Flag.relayDrain) {
+				Flag.relayDrain = 0;  /* Drain takes priority */
+			}
+
 			/* Relay GPIO output */
 			GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);
 			GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);

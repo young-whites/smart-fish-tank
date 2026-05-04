@@ -2,5 +2,5 @@
 
 
 
-Flag_StructType         Flag;
+Flag_StructType         Flag = { .manualTimeout = 60 };
 Record_StructType       Record;

@@ -320,6 +320,7 @@ static void _KEYD_Press(void)
 			case 2: Flag.relayDrain = !Flag.relayDrain; break;
 			case 3: Flag.relayOxygen = !Flag.relayOxygen; break;
 		}
+		Flag.manualTimeout = 60;  /* Reset safety timeout */
 	}
 }
 

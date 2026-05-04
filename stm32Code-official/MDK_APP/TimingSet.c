@@ -26,6 +26,30 @@ void Servo_SetAngle(uint8_t angle)
 
 void Timing_1s(void)
 {
+	/* Manual relay safety timeout */
+	if (Record.runMode == 1) {
+		/* Check if any relay is ON */
+		if (Flag.relayHeat || Flag.relayFill || Flag.relayDrain || Flag.relayOxygen) {
+			if (Flag.manualTimeout > 0) {
+				Flag.manualTimeout--;
+			}
+			if (Flag.manualTimeout == 0) {
+				/* Timeout: turn off all relays */
+				Flag.relayHeat = 0;
+				Flag.relayFill = 0;
+				Flag.relayDrain = 0;
+				Flag.relayOxygen = 0;
+				BEEP_Blink(3, 0, 2);  /* Beep 3 times to warn */
+			}
+		} else {
+			/* No relay ON: reset timeout */
+			Flag.manualTimeout = 60;
+		}
+	} else {
+		/* Auto mode: reset timeout */
+		Flag.manualTimeout = 60;
+	}
+
 	/* DS18B20 read with fault detection */
 	{
 		float t = DS18B20_GetTemperture();

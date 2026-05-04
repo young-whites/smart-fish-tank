@@ -5,8 +5,8 @@
 extern uint8_t ESP01S_WiFiConnected;
 
 /*****************************************************************************
-* Ãû³Æ:   OLED_ShowNumF6X12_Float
-* ¹¦ÄÜ:   ÔÚÖ¸¶¨Î»ÖÃÏÔÊ¾¸¡µãÊý
+* ï¿½ï¿½ï¿½ï¿½:   OLED_ShowNumF6X12_Float
+* ï¿½ï¿½ï¿½ï¿½:   ï¿½ï¿½Ö¸ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 *****************************************************************************/
 void OLED_ShowNumF6X12_Float(uint8_t row, uint8_t column, float num, uint8_t decimal)
 {
@@ -40,7 +40,7 @@ void OLED_ShowNumF6X12_Float(uint8_t row, uint8_t column, float num, uint8_t dec
 	}
 }
 
-/* ===== ¸¨Öúº¯Êý ===== */
+/* ===== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ===== */
 static void _ShowOnOff(uint8_t row, uint8_t col, uint8_t state)
 {
 	if (state) {
@@ -84,7 +84,7 @@ static void _ShowFeedStatus(uint8_t row, uint8_t col)
 	}
 }
 
-/* Ò³ÂëÖ¸Ê¾Æ÷ */
+/* Ò³ï¿½ï¿½Ö¸Ê¾ï¿½ï¿½ */
 static void _ShowPageIndicator(void)
 {
 	uint8_t mainP = Flag.currentPage + 1;
@@ -95,7 +95,7 @@ static void _ShowPageIndicator(void)
 }
 
 /* ================================================================
- *  Æô¶¯»­Ãæ
+ *  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  * ================================================================ */
 void OLED_ShowStart(void)
 {
@@ -139,23 +139,23 @@ void OLED_ShowStart(void)
 }
 
 /* ================================================================
- *  Ö÷Ò³Ãæ 1 - Êý¾ÝÏÔÊ¾
+ *  ï¿½ï¿½Ò³ï¿½ï¿½ 1 - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
  * ================================================================ */
 static void _Main_Sub0(void)
 {
 	_ShowPageIndicator();
-	/* row2: Ë®ÎÂ */
+	/* row2: Ë®ï¿½ï¿½ */
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xcb\xae", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xce\xc2", 0);
 	OLED_Show_OneCharF6X12(2, 24, ':');
 	OLED_ShowNumF6X12_Float(2, 30, Record.waterTemp, 1);
 	OLED_Show_OneCharF6X12(2, 54, 'C');
-	/* row2ÓÒ: PH */
+	/* row2ï¿½ï¿½: PH */
 	OLED_Show_OneCharF6X12(2, 72, 'P');
 	OLED_Show_OneCharF6X12(2, 78, 'H');
 	OLED_Show_OneCharF6X12(2, 84, ':');
 	OLED_ShowNumF6X12_Float(2, 90, Record.phValue, 1);
-	/* row6: ×´Ì¬À¸ */
+	/* row6: ×´Ì¬ï¿½ï¿½ */
 	_ShowWiFi(6, 0);
 	_ShowMode(6, 30);
 	_ShowFeedStatus(6, 66);
@@ -170,12 +170,12 @@ static void _Main_Sub1(void)
 	OLED_Show_OneCharF6X12(2, 24, ':');
 	OLED_ShowNumF6X12(2, 30, 3, (uint32_t)Record.waterLevel);
 	OLED_Show_OneCharF6X12(2, 48, '%');
-	/* row2ÓÒ: ¿ÕÆø */
+	/* row2ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ */
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 66,  (uint8_t*)"\xbf\xd5", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 78,  (uint8_t*)"\xc6\xf8", 0);
 	OLED_Show_OneCharF6X12(2, 90, ':');
 	OLED_ShowNumF6X12(2, 96, 4, (uint32_t)Record.airQuality);
-	/* row6: ¼ÓÈÈ+¼ÓË® */
+	/* row6: ï¿½ï¿½ï¿½ï¿½+ï¿½ï¿½Ë® */
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 0,  (uint8_t*)"\xbc\xd3", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 12, (uint8_t*)"\xc8\xc8", 0);
 	OLED_Show_OneCharF6X12(6, 24, ':');
@@ -189,7 +189,7 @@ static void _Main_Sub1(void)
 static void _Main_Sub2(void)
 {
 	_ShowPageIndicator();
-	/* row2: ÅÅË®+ÔöÑõ */
+	/* row2: ï¿½ï¿½Ë®+ï¿½ï¿½ï¿½ï¿½ */
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xc5\xc5", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xcb\xae", 0);
 	OLED_Show_OneCharF6X12(2, 24, ':');
@@ -211,14 +211,14 @@ static void _Main_Sub2(void)
 }
 
 /* ================================================================
- *  Ö÷Ò³Ãæ 2 - ãÐÖµÉèÖÃ (ÉÏÏÂÏÞ¸÷Õ¼Ò»ÐÐ, KEY5ÇÐ»»Ñ¡ÖÐ)
+ *  ï¿½ï¿½Ò³ï¿½ï¿½ 2 - ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½Õ¼Ò»ï¿½ï¿½, KEY5ï¿½Ð»ï¿½Ñ¡ï¿½ï¿½)
  * ================================================================ */
 
-/* ×Ó2-1: ÎÂ¶È */
+/* ï¿½ï¿½2-1: ï¿½Â¶ï¿½ */
 static void _Threshold_Sub0(void)
 {
 	_ShowPageIndicator();
-	/* row2: ×ÜÀÀ */
+	/* row2: ï¿½ï¿½ï¿½ï¿½ */
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xce\xc2", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xb6\xc8", 0);
 	OLED_Show_OneCharF6X12(2, 24, ':');
@@ -226,7 +226,7 @@ static void _Threshold_Sub0(void)
 	OLED_Show_OneCharF6X12(2, 54, '~');
 	OLED_ShowNumF6X12_Float(2, 60, Record.tempUpper, 1);
 
-	/* row4: ÏÂÏÞ - ¹â±ê */
+	/* row4: ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ */
 	if (Flag.thresholdField == 0) {
 		OLED_Show_OneCharF6X12(4, 0, '>');
 	}
@@ -235,7 +235,7 @@ static void _Threshold_Sub0(void)
 	OLED_Show_OneCharF6X12(4, 30, ':');
 	OLED_ShowNumF6X12_Float(4, 36, Record.tempLower, 1);
 
-	/* row6: ÉÏÏÞ - ¹â±ê */
+	/* row6: ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ */
 	if (Flag.thresholdField == 1) {
 		OLED_Show_OneCharF6X12(6, 0, '>');
 	}
@@ -252,7 +252,7 @@ static void _Threshold_Sub0(void)
 	OLED_Show_OneCharF6X12(6, 102, 'w');
 }
 
-/* ×Ó2-2: ¿ÕÆø (Ö»ÓÐÉÏÏÞ) */
+/* ï¿½ï¿½2-2: ï¿½ï¿½ï¿½ï¿½ (Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½) */
 static void _Threshold_Sub1(void)
 {
 	_ShowPageIndicator();
@@ -280,7 +280,7 @@ static void _Threshold_Sub1(void)
 	OLED_Show_OneCharF6X12(6, 60, '0');
 }
 
-/* ×Ó2-3: Ë®Î» */
+/* ï¿½ï¿½2-3: Ë®Î» */
 static void _Threshold_Sub2(void)
 {
 	_ShowPageIndicator();
@@ -317,7 +317,7 @@ static void _Threshold_Sub2(void)
 	OLED_Show_OneCharF6X12(6, 102, 'w');
 }
 
-/* ×Ó2-4: PH */
+/* ï¿½ï¿½2-4: PH */
 static void _Threshold_Sub3(void)
 {
 	_ShowPageIndicator();
@@ -352,7 +352,7 @@ static void _Threshold_Sub3(void)
 }
 
 /* ================================================================
- *  Ö÷Ò³Ãæ 3 - ÊÖ¶¯¿ØÖÆ
+ *  ï¿½ï¿½Ò³ï¿½ï¿½ 3 - ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½
  * ================================================================ */
 static void _ShowClearRow(uint8_t row)
 {
@@ -367,12 +367,24 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	static uint8_t lastMode = 0xFF;
 
 	_ShowPageIndicator();
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xca\xd6", 0);
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xb6\xaf", 0);
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 24, (uint8_t*)"\xbf\xd8", 0);
-	ZoneBitCode_OLED_Show_ChineseF6X12(2, 36, (uint8_t*)"\xd6\xc6", 0);
 
-	/* Ä£Ê½±ä»¯Ê±Çå³ý row4 ºÍ row6 */
+	/* Show title: "æ‰‹åŠ¨æŽ§åˆ¶" or "å–‚é£Ÿä¸­" */
+	if (Flag.feeding) {
+		/* Show feeding status */
+		ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xce\xb9", 0);  /* å–‚ */
+		ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xca\xb3", 0);  /* é£Ÿ */
+		OLED_Show_OneCharF6X12(2, 24, ':');
+		OLED_ShowNumF6X12(2, 30, 3, (uint32_t)Record.feedCountdown);
+		OLED_Show_OneCharF6X12(2, 48, 's');
+	} else {
+		/* Normal title: æ‰‹åŠ¨æŽ§åˆ¶ */
+		ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xca\xd6", 0);
+		ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xb6\xaf", 0);
+		ZoneBitCode_OLED_Show_ChineseF6X12(2, 24, (uint8_t*)"\xbf\xd8", 0);
+		ZoneBitCode_OLED_Show_ChineseF6X12(2, 36, (uint8_t*)"\xd6\xc6", 0);
+	}
+
+	/* Ä£Ê½ï¿½ä»¯Ê±ï¿½ï¿½ï¿½ row4 ï¿½ï¿½ row6 */
 	if (lastMode != Record.runMode) {
 		lastMode = Record.runMode;
 		_ShowClearRow(4);
@@ -380,13 +392,13 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	}
 
 	if (Record.runMode == 0) {
-		/* ×Ô¶¯Ä£Ê½: ÏÔÊ¾"×Ô¶¯Ä£Ê½!"£¬ËùÓÐ×ÓÒ³ÃæÍ³Ò»ÏÔÊ¾ */
+		/* ï¿½Ô¶ï¿½Ä£Ê½: ï¿½ï¿½Ê¾"ï¿½Ô¶ï¿½Ä£Ê½!"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ï¿½ï¿½Í³Ò»ï¿½ï¿½Ê¾ */
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xd7\xd4", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)"\xb6\xaf", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 30, (uint8_t*)"\xc4\xa3", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 42, (uint8_t*)"\xca\xbd", 0);
 		OLED_Show_OneCharF6X12(4, 54, '!');
-		/* row6: ÌáÊ¾°´¼ü */
+		/* row6: ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ */
 		OLED_Show_OneCharF6X12(6, 0,  'K');
 		OLED_Show_OneCharF6X12(6, 6,  '3');
 		OLED_Show_OneCharF6X12(6, 12, ':');
@@ -395,7 +407,7 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 		return;
 	}
 
-	/* ÊÖ¶¯Ä£Ê½: ÏÔÊ¾¼ÌµçÆ÷¿ØÖÆ */
+	/* ï¿½Ö¶ï¿½Ä£Ê½: ï¿½ï¿½Ê¾ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 	OLED_Show_OneCharF6X12(4, 0, '>');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)name_gbk, 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)(name_gbk + 2), 0);
@@ -410,7 +422,7 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 		OLED_Show_OneCharF6X12(4, 48, 'F');
 	}
 
-	/* row6: ²Ù×÷ÌáÊ¾ */
+	/* row6: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ */
 	OLED_Show_OneCharF6X12(6, 0,  'K');
 	OLED_Show_OneCharF6X12(6, 6,  '3');
 	OLED_Show_OneCharF6X12(6, 12, ':');
@@ -422,10 +434,16 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	OLED_Show_OneCharF6X12(6, 66, '+');
 	OLED_Show_OneCharF6X12(6, 72, '/');
 	OLED_Show_OneCharF6X12(6, 78, '-');
+
+	/* Show manual timeout when relay is ON */
+	if (Flag.relayHeat || Flag.relayFill || Flag.relayDrain || Flag.relayOxygen) {
+		OLED_ShowNumF6X12(6, 90, 2, (uint32_t)Flag.manualTimeout);
+		OLED_Show_OneCharF6X12(6, 102, 's');
+	}
 }
 
 /* ================================================================
- *  Ö÷µ÷¶Èº¯Êý
+ *  ï¿½ï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½ï¿½
  * ================================================================ */
 void OLED_Show_Page(uint8_t page)
 {
