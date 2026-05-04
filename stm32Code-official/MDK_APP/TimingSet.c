@@ -61,7 +61,8 @@ void Timing_1s(void)
 			/* Auto mode: auto feeding every 30s */
 			if (Flag.feeding == 0) {
 				autoFeedTimer++;
-				Record.feedCountdown = Record.feedInterval - autoFeedTimer;
+				Record.feedCountdown = (int16_t)Record.feedInterval - (int16_t)autoFeedTimer;
+				if (Record.feedCountdown < 0) Record.feedCountdown = 0;
 				if (autoFeedTimer >= Record.feedInterval) {
 					Flag.feeding = 1;
 					autoFeedTimer = 0;
@@ -82,6 +83,7 @@ void Timing_1s(void)
 			}
 			if (Record.feedCountdown > 0) {
 				Record.feedCountdown--;
+				if (Record.feedCountdown < 0) Record.feedCountdown = 0;
 			}
 			if (Record.feedCountdown == 0) {
 				Flag.feeding = 0;
