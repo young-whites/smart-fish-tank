@@ -106,6 +106,7 @@ void Timing_1s(void)
 void Timing_1ms(void)
 {
 	KEY_DrvScan();
+	BEEP_DrvScan();
 }
 
 
