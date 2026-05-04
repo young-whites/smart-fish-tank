@@ -5,7 +5,7 @@
 
 
 
-//*************OLED å¼•è„šå®å®šä¹‰******************
+//*************OLED Òý½Åºê¶¨Òå******************
 //SDA  PA11
 #define OLED_SDA_RCC_APB2Periph_GPIOX   RCC_APB2Periph_GPIOA
 #define OLED_SDA_Port	                GPIOA
@@ -22,7 +22,7 @@
 
 
 
-//***************OLED ç›¸å…³é©±åŠ¨å‡½æ•°å£°æ˜Ž******************
+//***************OLED Ïà¹ØÇý¶¯º¯ÊýÉùÃ÷******************
 void OLED_GPIO_Config(void);
 void OLED_IIC_Start(void);
 void OLED_IIC_Stop(void);
