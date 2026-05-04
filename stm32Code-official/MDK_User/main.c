@@ -8,6 +8,7 @@
 #include "ds18b20.h"
 #include "bsp_adc.h"
 #include "TimingSet.h"
+#include "bsp_esp01s.h"
 
 extern volatile uint32_t TimeCnt_ms;
 
@@ -90,6 +91,9 @@ int main ( void )
 	TIM_Cmd(TIM3, ENABLE);
 	Servo_SetAngle(0);  /* Servo initial position */
 
+	/* Initialize ESP-01S WiFi module (AP mode + TCP server) */
+	ESP01S_Init();
+
 	/* Show startup screen */
 	OLED_ShowStart();
 	delay_ms(2000);
@@ -136,6 +140,18 @@ int main ( void )
 
 						/* Refresh OLED display */
 			OLED_Show_Page(Flag.currentPage);
+
+			/* ESP-01S: process incoming data from WiFi */
+			ESP01S_Process();
+
+			/* ESP-01S: send sensor data every ~1s */
+			{
+				static uint8_t espSendCnt = 0;
+				if (++espSendCnt >= 10) {  /* 100ms loop * 10 = ~1s */
+					espSendCnt = 0;
+					ESP01S_SendSensorData();
+				}
+			}
 
 			delay_ms(100);
 		}
