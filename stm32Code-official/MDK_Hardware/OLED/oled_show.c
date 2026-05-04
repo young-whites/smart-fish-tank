@@ -227,18 +227,14 @@ static void _Threshold_Sub0(void)
 	OLED_ShowNumF6X12_Float(2, 60, Record.tempUpper, 1);
 
 	/* row4: 下限 - 光标 */
-	if (Flag.thresholdField == 0) {
-		OLED_Show_OneCharF6X12(4, 0, '>');
-	}
+	OLED_Show_OneCharF6X12(4, 0, (Flag.thresholdField == 0) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xcf\xc2", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(4, 30, ':');
 	OLED_ShowNumF6X12_Float(4, 36, Record.tempLower, 1);
 
 	/* row6: 上限 - 光标 */
-	if (Flag.thresholdField == 1) {
-		OLED_Show_OneCharF6X12(6, 0, '>');
-	}
+	OLED_Show_OneCharF6X12(6, 0, (Flag.thresholdField == 1) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 6,  (uint8_t*)"\xc9\xcf", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(6, 30, ':');
@@ -292,18 +288,14 @@ static void _Threshold_Sub2(void)
 	OLED_ShowNumF6X12(2, 54, 3, (uint32_t)Record.waterLevelMax);
 	OLED_Show_OneCharF6X12(2, 72, '%');
 
-	if (Flag.thresholdField == 0) {
-		OLED_Show_OneCharF6X12(4, 0, '>');
-	}
+	OLED_Show_OneCharF6X12(4, 0, (Flag.thresholdField == 0) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xcf\xc2", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(4, 30, ':');
 	OLED_ShowNumF6X12(4, 36, 3, (uint32_t)Record.waterLevelMin);
 	OLED_Show_OneCharF6X12(4, 54, '%');
 
-	if (Flag.thresholdField == 1) {
-		OLED_Show_OneCharF6X12(6, 0, '>');
-	}
+	OLED_Show_OneCharF6X12(6, 0, (Flag.thresholdField == 1) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 6,  (uint8_t*)"\xc9\xcf", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(6, 30, ':');
@@ -328,17 +320,13 @@ static void _Threshold_Sub3(void)
 	OLED_Show_OneCharF6X12(2, 42, '~');
 	OLED_ShowNumF6X12_Float(2, 48, Record.phUpper, 1);
 
-	if (Flag.thresholdField == 0) {
-		OLED_Show_OneCharF6X12(4, 0, '>');
-	}
+	OLED_Show_OneCharF6X12(4, 0, (Flag.thresholdField == 0) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xcf\xc2", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(4, 30, ':');
 	OLED_ShowNumF6X12_Float(4, 36, Record.phLower, 1);
 
-	if (Flag.thresholdField == 1) {
-		OLED_Show_OneCharF6X12(6, 0, '>');
-	}
+	OLED_Show_OneCharF6X12(6, 0, (Flag.thresholdField == 1) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 6,  (uint8_t*)"\xc9\xcf", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(6, 30, ':');

@@ -183,17 +183,14 @@ uint8_t KEY_GetNumber(void)
 
 
 
-/*****************************************************************************
-* 名称:		按键A按下处理函数 (KEY1 - PA8)
-* 功能:		页面切换 主页→状态→阈�?�→主页�?�?
-*****************************************************************************/
+
 static void _KEYA_Press(void)
 {
 	Flag.currentPage++;
 	if (Flag.currentPage > 2) {
 		Flag.currentPage = 0;
 	}
-	// 进入阈�?�页面时重置选中参数索引
+	
 	if (Flag.currentPage == 2) {
 		Flag.thresholdIndex = 0;
 	}
@@ -201,11 +198,7 @@ static void _KEYA_Press(void)
 }
 
 
-/*****************************************************************************
-* 名称:		按键B按下处理函数 (KEY2 - PB3)
-* 功能:		在阈值页面切换�?�中参数（循�? 0-6�?
-*			 非阈值页面时无功�?
-*****************************************************************************/
+
 static void _KEYB_Press(void)
 {
 	// ��ҳ���л�: ��ҳ��1��3����ҳ��, ��ҳ��2��4��, ��ҳ��3��4��
@@ -328,68 +321,64 @@ static void _KEYE_Press(void)
 	}
 }
 
-static void _KEYE_LongPress(void)  // 长按2s触发喂�??
+static void _KEYE_LongPress(void)  
 {
 	if (Flag.feeding == 0) {
 		Flag.feeding = 1;
-		Record.feedCountdown = 30;  // 默�??30秒�?��?�时
+		Record.feedCountdown = 30;  
 	}
 }
 
 
 
-/*****************************************************************************
-* 名称:		按键事件处理主函�?
-* 功能:		从按�?缓冲区�?�取�?值，分发到�?�应按键处理函数
-*****************************************************************************/
 extern void (*current_operation_index)(void);
 void KEY_Scan(void)
 {
 	uint8_t	key, event;
-	for (key = KEY_Read(); key; key = KEY_Read())  // 逐个读取缓冲区键值直到缓冲区为空
+	for (key = KEY_Read(); key; key = KEY_Read()) 
 	{
-		event = key & 0xf0;		// 事件类型
-		key   = key & 0x0f;		// �?�?
+		event = key & 0xf0;		
+		key   = key & 0x0f;		
 		switch (key)
 		{
-			case KEY_A:  // KEY1 - PA8 - 页面切换（只有按下事件）
+			case KEY_A:  
 			{
 				switch (event)
 				{
-					case KEY_Evt_Press:		_KEYA_Press();	break;	// 按下
+					case KEY_Evt_Press:		_KEYA_Press();	break;	
 				}
 			}break;
 
-			case KEY_B:  // KEY2 - PB3 - 阈�?�参数�?�择（只有按下事件）
+			case KEY_B: 
 			{
 				switch (event)
 				{
-					case KEY_Evt_Press:		_KEYB_Press();	break;	// 按下
+					case KEY_Evt_Press:		_KEYB_Press();	break;	
 				}
 			}break;
 
-			case KEY_C:  // KEY3 - PB4 - �?/模式切换（短�?=加，长按=模式切换�?
+			case KEY_C:  
 			{
 				switch (event)
 				{
-					case KEY_Evt_Press:		_KEYC_Press();	break;	// �?�?=�?
-					case KEY_Evt_Long2S:	_KEYC_LongPress();	break;	// 长按=模式切换
+					case KEY_Evt_Press:		_KEYC_Press();	break;	
+					case KEY_Evt_Long2S:	_KEYC_LongPress();	break;	
 				}
 			}break;
 
-			case KEY_D:  // KEY4 - PB8 - 减（�?有按下事件）
+			case KEY_D: 
 			{
 				switch (event)
 				{
-					case KEY_Evt_Press:		_KEYD_Press();	break;	// 按下=�?
+					case KEY_Evt_Press:		_KEYD_Press();	break;	
 				}
 			}break;
 
-			case KEY_E:  // KEY5 - PB1 - 喂�?�（长按2秒触发）
+			case KEY_E: 
 			{
 				switch (event)
 				{
-					case KEY_Evt_Long2S:	_KEYE_LongPress();	break;	// 长按触发喂�??
+					case KEY_Evt_Long2S:	_KEYE_LongPress();	break;	
 				}
 			}break;
 		}
