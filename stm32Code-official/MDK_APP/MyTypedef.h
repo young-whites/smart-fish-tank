@@ -29,6 +29,7 @@ typedef struct
     uint16_t   airQuality;        // Air quality
     uint8_t    runMode;           // 0=Auto, 1=Manual
     uint16_t   feedCountdown;     // Feed countdown (sec)
+    uint16_t   feedInterval;      // Feed interval (sec), default 30
 
     // Thresholds
     float      tempLower;         // Temperature lower limit

@@ -77,6 +77,7 @@ int main ( void )
 	Record.airQuality = 20;
 	Record.runMode = 0;
 	Record.feedCountdown = 0;
+	Record.feedInterval = 30;
 	Record.tempLower = 20.0f;
 	Record.tempUpper = 35.0f;
 	Record.airQualityMax = 12;

@@ -336,7 +336,7 @@ static void _KEYE_LongPress(void)
 {
 	if (Flag.feeding == 0) {
 		Flag.feeding = 1;
-		Record.feedCountdown = 30; 
+		Record.feedCountdown = Record.feedInterval; 
 	}
 }
 

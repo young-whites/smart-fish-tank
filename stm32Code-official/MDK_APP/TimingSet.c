@@ -61,8 +61,8 @@ void Timing_1s(void)
 			/* Auto mode: auto feeding every 30s */
 			if (Flag.feeding == 0) {
 				autoFeedTimer++;
-				Record.feedCountdown = 30 - autoFeedTimer;
-				if (autoFeedTimer >= 30) {
+				Record.feedCountdown = Record.feedInterval - autoFeedTimer;
+				if (autoFeedTimer >= Record.feedInterval) {
 					Flag.feeding = 1;
 					autoFeedTimer = 0;
 					servoOpenSec = 0;
