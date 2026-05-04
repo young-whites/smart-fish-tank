@@ -390,6 +390,7 @@ void KEY_Scan(void)
 			{
 				switch (event)
 				{
+					case KEY_Evt_Press:	_KEYE_Press();	break;
 					case KEY_Evt_Long2S:	_KEYE_LongPress();	break;	
 				}
 			}break;
