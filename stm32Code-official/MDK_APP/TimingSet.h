@@ -13,4 +13,6 @@ void Timing_500ms   (void); /*500ms Timer scan execution function*/
 
 
 
+void Servo_SetAngle(uint8_t angle);
+
 #endif /*__TIMINGSET_H*/

@@ -7,6 +7,7 @@
 #include "MyTypedef.h"
 #include "ds18b20.h"
 #include "bsp_adc.h"
+#include "TimingSet.h"
 
 /*******************************************/
 /*              Interrupt Priority          */
@@ -55,6 +56,7 @@ int main ( void )
 	Flag.relayFill = 0;
 	Flag.relayDrain = 0;
 	Flag.relayOxygen = 0;
+	Flag.sensorError = 0;
 
 	Record.waterTemp = 0.0f;
 	Record.phValue = 7.2f;
@@ -70,6 +72,10 @@ int main ( void )
 	Record.waterLevelMin = 40;
 	Record.waterLevelMax = 80;
 
+	/* Enable TIM3 for servo PWM */
+	TIM_Cmd(TIM3, ENABLE);
+	Servo_SetAngle(0);  /* Servo initial position */
+
 	/* Show startup screen */
 	OLED_ShowStart();
 	delay_ms(2000);
@@ -81,6 +87,12 @@ int main ( void )
 
 		while ( 1 )
 		{
+			/* Relay GPIO output */
+			GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);
+			GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);
+			GPIO_WriteBit(GPIOB, GPIO_Pin_15, Flag.relayDrain ? Bit_SET : Bit_RESET);
+			GPIO_WriteBit(GPIOA, GPIO_Pin_15, Flag.relayOxygen ? Bit_SET : Bit_RESET);
+
 			/* Page change detection and clear screen */
 			curPage = Flag.currentPage * 10 + Flag.subPage;
 			if (curPage != lastPage) {

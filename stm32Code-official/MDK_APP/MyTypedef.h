@@ -15,6 +15,7 @@ typedef struct
     uint8_t    relayFill;         // Fill relay
     uint8_t    relayDrain;        // Drain relay
     uint8_t    relayOxygen;       // Oxygen relay
+    uint8_t    sensorError;       // Sensor error flags: bit0=DS18B20, bit1=ADC
 }  Flag_StructType;
 extern   Flag_StructType Flag;
 

@@ -4,6 +4,7 @@
 #include "ds18b20.h"
 #include "bsp_beep.h"
 #include "bsp_adc.h"
+#include "stm32f10x_tim.h"
 
 extern void OLED_Show_Page(uint8_t page);
 extern void OLED_Clr_Screen(void);
@@ -13,18 +14,45 @@ extern void OLED_ShowStart(void);
 static uint8_t _lastPage = 0xFF;
 
 
+/* Servo angle: 0~180 degrees, maps to PWM duty 500~2500us (period 20ms=20000us) */
+void Servo_SetAngle(uint8_t angle)
+{
+	uint16_t pulse;
+	if (angle > 180) angle = 180;
+	pulse = 500 + (uint16_t)((uint32_t)angle * 2000 / 180);
+	TIM_SetCompare1(TIM3, pulse);
+}
+
+
 void Timing_1s(void)
 {
-	/* DS18B20 temperature read (12-bit conversion needs >= 750ms) */
-	Record.waterTemp = DS18B20_GetTemperture();
+	/* DS18B20 read with fault detection */
+	{
+		float t = DS18B20_GetTemperture();
+		/* DS18B20 returns 85.0 on power-up error, -127.0 on read failure */
+		if (t > -50.0f && t < 125.0f) {
+			Record.waterTemp = t;
+			Flag.sensorError &= ~0x01;  /* Clear DS18B20 error */
+		} else {
+			Flag.sensorError |= 0x01;   /* Set DS18B20 error */
+		}
+	}
 
-	/* Feed countdown */
+	/* Feed control */
 	if (Flag.feeding == 1) {
+		if (Record.feedCountdown > 30 - 3) {
+			/* First 3 seconds: servo open */
+			Servo_SetAngle(90);
+		} else {
+			/* After 3 seconds: servo close */
+			Servo_SetAngle(0);
+		}
 		if (Record.feedCountdown > 0) {
 			Record.feedCountdown--;
 		}
 		if (Record.feedCountdown == 0) {
 			Flag.feeding = 0;
+			Servo_SetAngle(0);
 		}
 	}
 }
@@ -55,12 +83,15 @@ void Timing_5ms(void)
 			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
 			Record.waterLevel = (uint8_t)(ADC_GetConversionValue(ADC1) * 100 / 4095);
+			if (Record.waterLevel > 100) Record.waterLevel = 100;
 			break;
 		case 1: /* PH PA0 ADC1_IN0 */
 			ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5);
 			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
 			Record.phValue = ADC_GetConversionValue(ADC1) * 14.0f / 4095.0f;
+			if (Record.phValue > 14.0f) Record.phValue = 14.0f;
+			if (Record.phValue < 0.0f) Record.phValue = 0.0f;
 			break;
 		case 2: /* Air quality PA4 ADC1_IN4 */
 			ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5);
@@ -118,12 +149,6 @@ void Timing_500ms(void)
 			Flag.relayOxygen = 0;
 		}
 	}
-
-	/* --- Relay GPIO output --- */
-	GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);    /* Heat */
-	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);    /* Fill */
-	GPIO_WriteBit(GPIOB, GPIO_Pin_15, Flag.relayDrain ? Bit_SET : Bit_RESET);   /* Drain */
-	GPIO_WriteBit(GPIOA, GPIO_Pin_15, Flag.relayOxygen ? Bit_SET : Bit_RESET);  /* Oxygen */
 
 	/* --- Alarm check --- */
 	{
