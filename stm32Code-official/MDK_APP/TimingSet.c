@@ -54,19 +54,34 @@ void Timing_1s(void)
 
 	/* Feed control */
 	{
-		static uint8_t servoOpenSec = 0;  /* Seconds servo has been open */
+		static uint8_t servoOpenSec = 0;
+		static uint16_t autoFeedTimer = 0;  /* Auto feed countdown */
+
+		if (Record.runMode == 0) {
+			/* Auto mode: auto feeding every 30s */
+			if (Flag.feeding == 0) {
+				autoFeedTimer++;
+				Record.feedCountdown = 30 - autoFeedTimer;
+				if (autoFeedTimer >= 30) {
+					Flag.feeding = 1;
+					autoFeedTimer = 0;
+					servoOpenSec = 0;
+				}
+			}
+		} else {
+			/* Manual mode: stop auto countdown */
+			autoFeedTimer = 0;
+		}
 
 		if (Flag.feeding == 1) {
+			if (servoOpenSec < 3) {
+				Servo_SetAngle(90);
+				servoOpenSec++;
+			} else {
+				Servo_SetAngle(0);
+			}
 			if (Record.feedCountdown > 0) {
 				Record.feedCountdown--;
-				if (servoOpenSec < 3) {
-					/* First 3 seconds: servo open */
-					Servo_SetAngle(90);
-					servoOpenSec++;
-				} else {
-					/* After 3 seconds: servo close, wait for countdown */
-					Servo_SetAngle(0);
-				}
 			}
 			if (Record.feedCountdown == 0) {
 				Flag.feeding = 0;
