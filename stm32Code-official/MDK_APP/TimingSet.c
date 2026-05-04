@@ -55,43 +55,48 @@ void Timing_1s(void)
 	/* Feed control */
 	{
 		static uint8_t servoOpenSec = 0;
-		static uint16_t autoFeedTimer = 0;  /* Auto feed countdown */
+		static uint16_t autoFeedTimer = 0;
 
-		if (Record.runMode == 0) {
-			/* Auto mode: auto feeding every 30s */
-			if (Flag.feeding == 0) {
-				autoFeedTimer++;
-				Record.feedCountdown = (int16_t)Record.feedInterval - (int16_t)autoFeedTimer;
-				if (Record.feedCountdown < 0) Record.feedCountdown = 0;
-				if (autoFeedTimer >= Record.feedInterval) {
-					Flag.feeding = 1;
-					autoFeedTimer = 0;
-					servoOpenSec = 0;
-				}
+		/* Auto mode: count down to next feed */
+		if (Record.runMode == 0 && Flag.feeding == 0) {
+			autoFeedTimer++;
+			Record.feedCountdown = (int16_t)Record.feedInterval - (int16_t)autoFeedTimer;
+			if (Record.feedCountdown < 0) Record.feedCountdown = 0;
+			if (autoFeedTimer >= Record.feedInterval) {
+				Flag.feeding = 1;
+				servoOpenSec = 0;
+				autoFeedTimer = 0;
+				Record.feedCountdown = Record.feedInterval;
 			}
-		} else {
-			/* Manual mode: stop auto countdown */
+		}
+
+		/* Manual mode: reset auto timer */
+		if (Record.runMode == 1) {
 			autoFeedTimer = 0;
 		}
 
+		/* Feed active: control servo and count down */
 		if (Flag.feeding == 1) {
+			/* Servo open for first 3 seconds, then close */
 			if (servoOpenSec < 3) {
 				Servo_SetAngle(90);
 				servoOpenSec++;
 			} else {
 				Servo_SetAngle(0);
 			}
+
+			/* Decrement countdown */
 			if (Record.feedCountdown > 0) {
 				Record.feedCountdown--;
-				if (Record.feedCountdown < 0) Record.feedCountdown = 0;
 			}
-			if (Record.feedCountdown == 0) {
+
+			/* Feed cycle complete */
+			if (Record.feedCountdown <= 0) {
 				Flag.feeding = 0;
+				Record.feedCountdown = 0;
 				Servo_SetAngle(0);
 				servoOpenSec = 0;
 			}
-		} else {
-			servoOpenSec = 0;
 		}
 	}
 }
