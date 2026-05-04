@@ -3,6 +3,7 @@
 
 extern void OLED_Clr_Screen(void);
 extern void OLED_ShowStart(void);
+extern void Servo_SetAngle(uint8_t angle);
 
 void KEY_GPIO_Config(void)
 {
@@ -324,13 +325,13 @@ static void _KEYD_Press(void)
 	}
 	if (Flag.currentPage == 2 && Record.runMode == 1) {  // Manual control page, manual mode
 		if (Flag.subPage == 4) {
-			/* Feed toggle */
+			/* Feed: direct servo control in manual mode */
 			if (Flag.feeding) {
 				Flag.feeding = 0;
-				Record.feedCountdown = 0;
+				Servo_SetAngle(0);
 			} else {
 				Flag.feeding = 1;
-				Record.feedCountdown = Record.feedInterval;
+				Servo_SetAngle(90);
 			}
 		} else {
 			switch (Flag.subPage) {
