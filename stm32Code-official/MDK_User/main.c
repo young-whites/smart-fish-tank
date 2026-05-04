@@ -145,8 +145,6 @@ int main ( void )
 				OLED_Show_OneCharF6X12(0, 54, k3 ? '0' : '1');
 				OLED_Show_OneCharF6X12(0, 66, k4 ? '0' : '1');
 				OLED_Show_OneCharF6X12(0, 78, k5 ? '0' : '1');
-				/* TIM2 alive check: show running counter */
-				OLED_ShowNumF6X12(6, 90, 5, TimeCnt_ms / 1000);
 			}
 
 			/* Refresh OLED display */
