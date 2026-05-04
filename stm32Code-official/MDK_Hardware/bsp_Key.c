@@ -219,7 +219,7 @@ static void _KEYB_Press(void)
 
 	uint8_t maxSub = 3;
 	if (Flag.currentPage == 1) maxSub = 5;
-	if (Flag.currentPage == 2) maxSub = 4;
+	if (Flag.currentPage == 2) maxSub = 5;
 
 	Flag.subPage++;
 	if (Flag.subPage >= maxSub) {
@@ -322,14 +322,25 @@ static void _KEYD_Press(void)
 			}
 		}
 	}
-	if (Flag.currentPage == 2 && Record.runMode == 1) {  // Manual control page, manual mode: toggle relay
-		switch (Flag.subPage) {
-			case 0: Flag.relayHeat = !Flag.relayHeat; break;
-			case 1: Flag.relayFill = !Flag.relayFill; break;
-			case 2: Flag.relayDrain = !Flag.relayDrain; break;
-			case 3: Flag.relayOxygen = !Flag.relayOxygen; break;
+	if (Flag.currentPage == 2 && Record.runMode == 1) {  // Manual control page, manual mode
+		if (Flag.subPage == 4) {
+			/* Feed toggle */
+			if (Flag.feeding) {
+				Flag.feeding = 0;
+				Record.feedCountdown = 0;
+			} else {
+				Flag.feeding = 1;
+				Record.feedCountdown = Record.feedInterval;
+			}
+		} else {
+			switch (Flag.subPage) {
+				case 0: Flag.relayHeat = !Flag.relayHeat; break;
+				case 1: Flag.relayFill = !Flag.relayFill; break;
+				case 2: Flag.relayDrain = !Flag.relayDrain; break;
+				case 3: Flag.relayOxygen = !Flag.relayOxygen; break;
+			}
+			Flag.manualTimeout = 60;  /* Reset safety timeout */
 		}
-		Flag.manualTimeout = 60;  /* Reset safety timeout */
 	}
 }
 

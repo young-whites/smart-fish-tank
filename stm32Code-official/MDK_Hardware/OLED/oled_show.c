@@ -380,6 +380,35 @@ static void _ShowClearRow(uint8_t row)
 	}
 }
 
+static void _Manual_Feed(void)
+{
+	_ShowPageIndicator();
+	/* Row2: Feed status */
+	OLED_Show_OneCharF6X12(2, 0,  'F');
+	OLED_Show_OneCharF6X12(2, 6,  'e');
+	OLED_Show_OneCharF6X12(2, 12, 'e');
+	OLED_Show_OneCharF6X12(2, 18, 'd');
+	OLED_Show_OneCharF6X12(2, 24, ':');
+	if (Flag.feeding) {
+		OLED_ShowNumF6X12(2, 30, 3, (uint32_t)Record.feedCountdown);
+		OLED_Show_OneCharF6X12(2, 48, 's');
+	} else {
+		OLED_Show_OneCharF6X12(2, 30, 'O');
+		OLED_Show_OneCharF6X12(2, 36, 'F');
+		OLED_Show_OneCharF6X12(2, 42, 'F');
+	}
+	/* Row6: key hints */
+	OLED_Show_OneCharF6X12(6, 0,  'K');
+	OLED_Show_OneCharF6X12(6, 6,  '4');
+	OLED_Show_OneCharF6X12(6, 12, ':');
+	OLED_Show_OneCharF6X12(6, 18, 'O');
+	OLED_Show_OneCharF6X12(6, 24, 'N');
+	OLED_Show_OneCharF6X12(6, 30, '/');
+	OLED_Show_OneCharF6X12(6, 36, 'O');
+	OLED_Show_OneCharF6X12(6, 42, 'F');
+	OLED_Show_OneCharF6X12(6, 48, 'F');
+}
+
 static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 {
 	static uint8_t lastMode = 0xFF;
@@ -488,6 +517,7 @@ void OLED_Show_Page(uint8_t page)
 				case 1: _Manual_Sub("\xbc\xd3\xcb\xae", &Flag.relayFill); break;
 				case 2: _Manual_Sub("\xc5\xc5\xcb\xae", &Flag.relayDrain); break;
 				case 3: _Manual_Sub("\xd4\xf6\xd1\xf5", &Flag.relayOxygen); break;
+				case 4: _Manual_Feed(); break;
 				default: _Manual_Sub("\xbc\xd3\xc8\xc8", &Flag.relayHeat); break;
 			}
 			break;
