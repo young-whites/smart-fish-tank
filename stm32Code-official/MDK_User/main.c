@@ -103,7 +103,7 @@ int main ( void )
 			/* DS18B20 read with fault detection (outside ISR to avoid blocking) */
 			{
 				static uint32_t dsReadCnt = 0;
-				if (++dsReadCnt >= 100) {  /* Every ~10s at 100ms loop */
+				if (++dsReadCnt >= 10) {   /* Every ~1s at 100ms loop */
 					dsReadCnt = 0;
 					float t = DS18B20_GetTemperture();
 					if (t > -50.0f && t < 125.0f) {
