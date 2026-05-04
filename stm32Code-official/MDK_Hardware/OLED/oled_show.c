@@ -76,8 +76,12 @@ static void _ShowFeedStatus(uint8_t row, uint8_t col)
 	ZoneBitCode_OLED_Show_ChineseF6X12(row, col + 12, (uint8_t*)"\xca\xb3", 0);
 	OLED_Show_OneCharF6X12(row, col + 24, ':');
 	if (Flag.feeding) {
-		OLED_ShowNumF6X12(row, col + 30, 4, (uint32_t)Record.feedCountdown);
-		OLED_Show_OneCharF6X12(row, col + 54, 's');
+		OLED_ShowNumF6X12(row, col + 30, 3, (uint32_t)Record.feedCountdown);
+		OLED_Show_OneCharF6X12(row, col + 48, 's');
+	} else if (Record.runMode == 0) {
+		/* Auto mode: show countdown */
+		OLED_ShowNumF6X12(row, col + 30, 3, (uint32_t)Record.feedCountdown);
+		OLED_Show_OneCharF6X12(row, col + 48, 's');
 	} else {
 		OLED_Show_OneCharF6X12(row, col + 30, '-');
 		OLED_Show_OneCharF6X12(row, col + 36, '-');

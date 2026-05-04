@@ -252,9 +252,10 @@ void OLED_Show_OtherCharF6X12(uint8_t row, uint8_t column, uint8_t num)
   */
 void OLED_ShowNumF6X12( uint8_t row, uint8_t column, uint8_t NumLen ,uint32_t Num)
 {
-	static uint8_t i = 0;
-	static uint8_t empty = 0;
-	static uint8_t enshow = 0;
+	uint8_t i;
+	uint8_t empty;
+	uint8_t enshow;
+	enshow = 0;
 	for (i = 0; i < NumLen; i++)
 	{
 		empty = (Num / OLED_Calculate_Pow(10, NumLen - 1 - i)) % 10;
