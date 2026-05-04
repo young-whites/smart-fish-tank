@@ -78,12 +78,12 @@ int main ( void )
 	Record.runMode = 0;
 	Record.feedCountdown = 0;
 	Record.tempLower = 20.0f;
-	Record.tempUpper = 30.0f;
-	Record.airQualityMax = 15;
-	Record.phLower = 6.5f;
-	Record.phUpper = 8.5f;
-	Record.waterLevelMin = 40;
-	Record.waterLevelMax = 80;
+	Record.tempUpper = 35.0f;
+	Record.airQualityMax = 12;
+	Record.phLower = 4.0f;
+	Record.phUpper = 8.0f;
+	Record.waterLevelMin = 50;
+	Record.waterLevelMax = 70;
 
 	/* Enable TIM3 for servo PWM */
 	TIM_Cmd(TIM3, ENABLE);
