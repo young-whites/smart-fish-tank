@@ -1,14 +1,14 @@
 #include "bsp_esp01s.h"
 
-uint8_t ESP01S_WiFiConnected = 0;  // Ä¬ÈÏÀëÏß
+uint8_t ESP01S_WiFiConnected = 0;  // é»˜è®¤ç¦»çº¿
 
 void ESP01S_Init(void)
 {
-    // TODO: ESP-01S³õÊ¼»¯ (ATÖ¸ÁîÅäÖÃWiFi+TCP·şÎñÆ÷)
+    // TODO: ESP-01Såˆå§‹åŒ– (ATæŒ‡ä»¤é…ç½®WiFi+TCPæœåŠ¡å™¨)
     ESP01S_WiFiConnected = 0;
 }
 
 void ESP01S_ReconnectWiFi(void)
 {
-    // TODO: ºóÌ¨ÖØÁ¬WiFi
+    // TODO: åå°é‡è¿WiFi
 }

@@ -15,7 +15,10 @@ static uint8_t _lastPage = 0xFF;
 
 void Timing_1s(void)
 {
+	/* DS18B20 temperature read (12-bit conversion needs >= 750ms) */
+	Record.waterTemp = DS18B20_GetTemperture();
 
+	/* Feed countdown */
 	if (Flag.feeding == 1) {
 		if (Record.feedCountdown > 0) {
 			Record.feedCountdown--;
@@ -87,9 +90,6 @@ void Timing_50ms(void)
 
 void Timing_500ms(void)
 {
-	/* --- Sensor acquisition --- */
-	Record.waterTemp = DS18B20_GetTemperture();
-
 	/* --- Auto control (Auto mode only) --- */
 	if (Record.runMode == 0) {
 		/* Temperature hysteresis control */
