@@ -165,4 +165,17 @@ void  GENERAL_TIM_2_IRQHandler (void)
 /*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
 /*  available peripheral interrupt handler's name please refer to the startup */
 /*  file (startup_stm32f10x_xx.s).                                            */
+/**
+  * @brief  This function handles TIM3 interrupt.
+  * @note   TIM3 is used for servo PWM, no update interrupt processing needed.
+  */
+void TIM3_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM3, TIM_FLAG_Update);
+	}
+}
+
+/******************************************************************************/
 /******************************************************************************/
