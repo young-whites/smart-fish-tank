@@ -25,7 +25,7 @@
 #define            GENERAL_TIM_3                   TIM3
 #define            GENERAL_TIM_3_APBxClock_FUN     RCC_APB1PeriphClockCmd
 #define            GENERAL_TIM_3_CLK               RCC_APB1Periph_TIM3
-#define            GENERAL_TIM_3_Period            (1000-1)
+#define            GENERAL_TIM_3_Period            (20000-1)
 #define            GENERAL_TIM_3_Prescaler         71
 #define            GENERAL_TIM_3_IRQ               TIM3_IRQn
 #define            GENERAL_TIM_3_IRQHandler        TIM3_IRQHandler
