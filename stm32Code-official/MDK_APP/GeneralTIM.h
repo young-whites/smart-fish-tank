@@ -3,8 +3,8 @@
 #include "sys.h"
 
 
-/**************通用定时器TIM参数定义，只限TIM2、3、4、5************/
-// 当需要哪个定时器的时候，只需要把下面的宏定义改成1即可
+/************** General Timer TIM Configuration, only TIM2 and TIM3 ************/
+// If you need to change the timer period, only change the macro value to 1
 #define GENERAL_TIM2    1
 #define GENERAL_TIM3    1
 
@@ -32,7 +32,7 @@
 #endif /*GENERAL_TIM3*/
 
 
-/**************************函数声明********************************/
+/************************** Function Declarations ********************************/
 
 void GENERAL_TIM_Init(void);
 

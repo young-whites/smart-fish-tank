@@ -27,8 +27,8 @@
 
  
  
-/**********自定义的全局变量*******************/
-volatile uint32_t TimeCnt_ms = 0; // ms 计时变量
+/********** Global variables *******************/
+volatile uint32_t TimeCnt_ms = 0; // ms timer counter
  
  
 void NMI_Handler(void)
@@ -121,13 +121,13 @@ void  GENERAL_TIM_2_IRQHandler (void)
 	{	
 		TimeCnt_ms++;
 		
-		/*计数用于取余运算来判断时间事件*/
+		/* Scan time counter, overflow wraps at 60000 */
 		if (++msCnt >= 60000)
 		{
 			msCnt = 0;
 		}
 
-		/*1s扫秒时间，取余为整数说明时间到进入执行函数*/
+		/* 1s scan time: when msCnt is multiple of period, execute function */
 		if ((msCnt % 1000) == 0)		Timing_1s();
 		if ((msCnt % 500)  == 0)		Timing_500ms();
 		if ((msCnt % 50)   == 0)		Timing_50ms();

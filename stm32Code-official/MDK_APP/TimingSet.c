@@ -44,10 +44,10 @@ void Timing_2ms(void)
 
 void Timing_5ms(void)
 {
-	/* ADC 轮询采集（水位、PH、空气质量） */
+	/* ADC polling acquisition (Water level, PH, Air quality) */
 	static uint8_t adcCh = 0;
 	switch (adcCh) {
-		case 0: /* 水位 PA1 ADC1_IN1 */
+		case 0: /* Water level PA1 ADC1_IN1 */
 			ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
 			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
@@ -59,7 +59,7 @@ void Timing_5ms(void)
 			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
 			Record.phValue = ADC_GetConversionValue(ADC1) * 14.0f / 4095.0f;
 			break;
-		case 2: /* 空气质量 PA4 ADC1_IN4 */
+		case 2: /* Air quality PA4 ADC1_IN4 */
 			ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5);
 			ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 			while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
@@ -87,19 +87,19 @@ void Timing_50ms(void)
 
 void Timing_500ms(void)
 {
-	/* --- 传感器采集 --- */
+	/* --- Sensor acquisition --- */
 	Record.waterTemp = DS18B20_GetTemperture();
 
-	/* --- 自动控制（仅自动模式） --- */
+	/* --- Auto control (Auto mode only) --- */
 	if (Record.runMode == 0) {
-		/* 温度滞环控制 */
+		/* Temperature hysteresis control */
 		if (Record.waterTemp < Record.tempLower) {
 			Flag.relayHeat = 1;
 		} else if (Record.waterTemp > Record.tempUpper) {
 			Flag.relayHeat = 0;
 		}
 
-		/* 水位区间控制 */
+		/* Water level range control */
 		if (Record.waterLevel > Record.waterLevelMax) {
 			Flag.relayDrain = 1;
 			Flag.relayFill = 0;
@@ -111,7 +111,7 @@ void Timing_500ms(void)
 			Flag.relayDrain = 0;
 		}
 
-		/* 空气质量控制 */
+		/* Air quality control */
 		if (Record.airQuality > Record.airQualityMax) {
 			Flag.relayOxygen = 1;
 		} else {
@@ -119,13 +119,13 @@ void Timing_500ms(void)
 		}
 	}
 
-	/* --- 继电器 GPIO 输出 --- */
-	GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);    /* 加热 */
-	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);    /* 加水 */
-	GPIO_WriteBit(GPIOB, GPIO_Pin_15, Flag.relayDrain ? Bit_SET : Bit_RESET);   /* 排水 */
-	GPIO_WriteBit(GPIOA, GPIO_Pin_15, Flag.relayOxygen ? Bit_SET : Bit_RESET);  /* 增氧 */
+	/* --- Relay GPIO output --- */
+	GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);    /* Heat */
+	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);    /* Fill */
+	GPIO_WriteBit(GPIOB, GPIO_Pin_15, Flag.relayDrain ? Bit_SET : Bit_RESET);   /* Drain */
+	GPIO_WriteBit(GPIOA, GPIO_Pin_15, Flag.relayOxygen ? Bit_SET : Bit_RESET);  /* Oxygen */
 
-	/* --- 报警检测 --- */
+	/* --- Alarm check --- */
 	{
 		uint8_t alarm = 0;
 		if (Record.waterTemp < Record.tempLower || Record.waterTemp > Record.tempUpper) alarm = 1;

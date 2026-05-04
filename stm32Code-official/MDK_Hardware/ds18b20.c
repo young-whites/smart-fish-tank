@@ -2,10 +2,10 @@
 
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_IO_IN
-* å‡½æ•°åŠŸèƒ½		   : DS18B20_IOè¾“å…¥é…ç½®	   
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : æ—?
+* Function:        DS18B20_IO_IN
+* Description:     DS18B20 IO input config
+* Params:          None
+* Return:          None
 *******************************************************************************/
 void DS18B20_IO_IN(void)
 {
@@ -17,10 +17,10 @@ void DS18B20_IO_IN(void)
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_IO_OUT
-* å‡½æ•°åŠŸèƒ½		   : DS18B20_IOè¾“å‡ºé…ç½®	   
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : æ—?
+* Function:        DS18B20_IO_OUT
+* Description:     DS18B20 IO output config
+* Params:          None
+* Return:          None
 *******************************************************************************/
 void DS18B20_IO_OUT(void)
 {
@@ -33,25 +33,25 @@ void DS18B20_IO_OUT(void)
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Reset
-* å‡½æ•°åŠŸèƒ½		   : å¤ä½DS18B20  
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : æ—?
+* Function:        DS18B20_Reset
+* Description:     Reset DS18B20
+* Params:          None
+* Return:          None
 *******************************************************************************/
 void DS18B20_Reset(void)	   
 {                 
 	DS18B20_IO_OUT(); //SET PA7 OUTPUT
-	DS18B20_DQ_OUT=0; //æ‹‰ä½DQ
-	delay_us(750);    //æ‹‰ä½750us
+	DS18B20_DQ_OUT=0; //Pull low DQ
+	delay_us(750);    //Pull low 750us
 	DS18B20_DQ_OUT=1; //DQ=1 
 	delay_us(15);     //15US
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Check
-* å‡½æ•°åŠŸèƒ½		   : æ£?æµ‹DS18B20æ˜?å¦å­˜åœ?
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : 1:æœ?æ£?æµ‹åˆ°DS18B20çš„å­˜åœ?ï¼?0:å­˜åœ¨
+* Function:        DS18B20_Check
+* Description:     Check if DS18B20 exists
+* Params:          None
+* Return:          1: Not detected, 0: Detected
 *******************************************************************************/
 uint8_t DS18B20_Check(void) 	   
 {   
@@ -81,10 +81,10 @@ uint8_t DS18B20_Check(void)
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Read_Bit
-* å‡½æ•°åŠŸèƒ½		   : ä»DS18B20è¯»å–ä¸?ä¸?ä½?
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : 1/0
+* Function:        DS18B20_Read_Bit
+* Description:     Read one bit from DS18B20
+* Params:          None
+* Return:          1/0
 *******************************************************************************/
 uint8_t DS18B20_Read_Bit(void) 			 // read one bit
 {
@@ -107,10 +107,10 @@ uint8_t DS18B20_Read_Bit(void) 			 // read one bit
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Read_Byte
-* å‡½æ•°åŠŸèƒ½		   : ä»DS18B20è¯»å–ä¸?ä¸?å­—èŠ‚
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : ä¸?ä¸?å­—èŠ‚æ•°æ®
+* Function:        DS18B20_Read_Byte
+* Description:     Read one byte from DS18B20
+* Params:          None
+* Return:          One byte data
 *******************************************************************************/
 uint8_t DS18B20_Read_Byte(void)    // read one byte
 {        
@@ -125,10 +125,10 @@ uint8_t DS18B20_Read_Byte(void)    // read one byte
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Write_Byte
-* å‡½æ•°åŠŸèƒ½		   : å†™ä¸€ä¸?å­—èŠ‚åˆ°DS18B20
-* è¾?    å…?         : datï¼šè?å†™å…¥çš„å­—èŠ‚
-* è¾?    å‡?         : æ—?
+* Function:        DS18B20_Write_Byte
+* Description:     Write one byte to DS18B20
+* Params:          dat - byte to write
+* Return:          None
 *******************************************************************************/
 void DS18B20_Write_Byte(uint8_t dat)     
 {             
@@ -157,10 +157,10 @@ void DS18B20_Write_Byte(uint8_t dat)
 }
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Start
-* å‡½æ•°åŠŸèƒ½		   : å¼?å§‹æ¸©åº¦è½¬æ?
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : æ—?
+* Function:        DS18B20_Start
+* Description:     Start temperature conversion
+* Params:          None
+* Return:          None
 *******************************************************************************/
 void DS18B20_Start(void)// ds1820 start convert
 {   						               
@@ -171,10 +171,10 @@ void DS18B20_Start(void)// ds1820 start convert
 } 
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_Init
-* å‡½æ•°åŠŸèƒ½		   : åˆå?‹åŒ–DS18B20çš„IOå? DQ åŒæ—¶æ£?æµ‹DSçš„å­˜åœ?
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : 1:ä¸å­˜åœ?ï¼?0:å­˜åœ¨
+* Function:        DS18B20_Init
+* Description:     Initialize DS18B20 IO and check device presence
+* Params:          None
+* Return:          1: Not exists, 0: Exists
 *******************************************************************************/   	 
 u8 DS18B20_Init(void)
 {
@@ -192,10 +192,10 @@ u8 DS18B20_Init(void)
 }  
 
 /*******************************************************************************
-* å‡? æ•? å?         : DS18B20_GetTemperture
-* å‡½æ•°åŠŸèƒ½		   : ä»ds18b20å¾—åˆ°æ¸©åº¦å€?
-* è¾?    å…?         : æ—?
-* è¾?    å‡?         : æ¸©åº¦æ•°æ®
+* Function:        DS18B20_GetTemperture
+* Description:     Get temperature from DS18B20
+* Params:          None
+* Return:          Temperature value
 *******************************************************************************/ 
 float DS18B20_GetTemperture(void)
 {
@@ -224,6 +224,5 @@ float DS18B20_GetTemperture(void)
 	}
 	return value;    
 }
-
 
 

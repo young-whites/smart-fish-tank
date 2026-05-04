@@ -5,37 +5,37 @@
 
 typedef struct
 {
-    uint8_t    currentPage;       // 当前主页面 0=数据,1=阈值,2=手动控制
-    uint8_t    subPage;           // 当前子页面
-    uint8_t    thresholdField;    // 阈值页面: 0=选中下限, 1=选中上限 (主页面1:0-2, 主页面2:0-3, 主页面3:0-3)
-    uint8_t    thresholdIndex;    // 褰撳墠閫変腑鐨勯槇鍊煎弬鏁扮储寮? 0-6
-    uint8_t    alarmEnable;       // 鎶ヨ?︿娇鑳? 0=鍏抽棴, 1=寮?鍚?
-    uint8_t    feeding;           // 鍠傞?熺姸鎬? 0=绌洪棽, 1=鍠傞?熶腑
-    uint8_t    relayHeat;         // 鍔犵儹缁х數鍣?
-    uint8_t    relayFill;         // 鍔犳按缁х數鍣?
-    uint8_t    relayDrain;        // 鎺掓按缁х數鍣?
-    uint8_t    relayOxygen;       // 澧炴哀缁х數鍣?
+    uint8_t    currentPage;       // Current main page: 0=Home, 1=Threshold, 2=Manual control
+    uint8_t    subPage;           // Current sub page
+    uint8_t    thresholdField;    // Threshold page: 0=select lower, 1=select upper (Page 1:0-2, Page 2:0-3, Page 3:0-3)
+    uint8_t    thresholdIndex;    // Current selected threshold param index 0-6
+    uint8_t    alarmEnable;       // Alarm enable: 0=off, 1=on
+    uint8_t    feeding;           // Feed status: 0=idle, 1=feeding
+    uint8_t    relayHeat;         // Heat relay
+    uint8_t    relayFill;         // Fill relay
+    uint8_t    relayDrain;        // Drain relay
+    uint8_t    relayOxygen;       // Oxygen relay
 }  Flag_StructType;
 extern   Flag_StructType Flag;
 
 
 typedef struct
 {
-    float      waterTemp;         // 姘存俯 掳C
-    float      phValue;           // pH鍊?
-    uint8_t    waterLevel;        // 姘翠綅 0~100%
-    uint16_t   airQuality;        // 绌烘皵璐ㄩ噺
-    uint8_t    runMode;           // 0=鑷?鍔?, 1=鎵嬪姩
-    uint16_t   feedCountdown;     // 鍠傞?熷?掕?℃椂(绉?)
+    float      waterTemp;         // Water temperature C
+    float      phValue;           // pH value
+    uint8_t    waterLevel;        // Water level 0~100%
+    uint16_t   airQuality;        // Air quality
+    uint8_t    runMode;           // 0=Auto, 1=Manual
+    uint16_t   feedCountdown;     // Feed countdown (sec)
 
-    // 闃堝??
-    float      tempLower;         // 娓╁害涓嬮檺
-    float      tempUpper;         // 娓╁害涓婇檺
-    uint16_t   airQualityMax;     // 绌烘皵璐ㄩ噺涓婇檺
-    float      phLower;           // PH涓嬮檺
-    float      phUpper;           // PH涓婇檺
-    uint8_t    waterLevelMin;     // 姘翠綅涓嬮檺 %
-    uint8_t    waterLevelMax;     // 姘翠綅涓婇檺 %
+    // Thresholds
+    float      tempLower;         // Temperature lower limit
+    float      tempUpper;         // Temperature upper limit
+    uint16_t   airQualityMax;     // Air quality upper limit
+    float      phLower;           // PH lower limit
+    float      phUpper;           // PH upper limit
+    uint8_t    waterLevelMin;     // Water level lower limit %
+    uint8_t    waterLevelMax;     // Water level upper limit %
 }  Record_StructType;
 extern   Record_StructType Record;
 

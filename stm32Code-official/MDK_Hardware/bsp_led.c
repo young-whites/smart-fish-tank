@@ -7,17 +7,17 @@ static void                         LED_GPIO_Config                  ( void );
 
 
  /**
-  * @brief  配置LED用到的GPIO引脚
-  * @param  无
-  * @retval 无
+  * @brief  Configure LED GPIO pins
+  * @param  None
+  * @retval None
   */
 static void LED_GPIO_Config ( void )
 {		
-	/*定义一个GPIO_InitTypeDef类型的结构体*/
+	/* Define a GPIO_InitTypeDef type structure */
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 
-	/* 配置LED1 PB9 */
+	/* Configure LED1 PB9 */
 	RCC_APB2PeriphClockCmd (macLED_1_GPIO_CLK, ENABLE );
 	GPIO_InitStructure.GPIO_Pin = macLED_1_GPIO_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;   
@@ -41,34 +41,34 @@ static void LED_GPIO_Config ( void )
 
 
 
-#define		LED_MAX				(1)					// LED最大数量
+#define		LED_MAX				(1)					// LED max count
 //----------------------------------------------------------------------------
-#define		LED_Name_First		(0x01)				// bsp_led.h中的第一个LED枚举值应与此值一致，后续LED枚举值应在此基础上依次递增(枚举定义)
+#define		LED_Name_First		(0x01)				// First LED enum value in bsp_led.h should match this, subsequent LED enum values increment from here
 //----------------------------------------------------------------------------
-#define		OUT_CYCLE			(100)				// LED输出周期
-#define		GRAD_DEC			(5)					// LED渐暗速度：占空比递减的计时周期数
-#define		GRAD_INC			(5)					// LED渐亮速度：占空比递增的计时周期数
-#define		GRAD_OFF_TIME		(50)				// LED全灭后停顿时间（单位毫秒，应为GRAD_DEC的整数倍）
-#define		GRAD_ON_TIME		(5)					// LED全亮后停顿时间（单位毫秒，应为GRAD_INC的整数倍）
+#define		OUT_CYCLE			(100)				// LED output cycle
+#define		GRAD_DEC			(5)					// LED dim speed: duty decrement timing cycles
+#define		GRAD_INC			(5)					// LED brighten speed: duty increment timing cycles
+#define		GRAD_OFF_TIME		(50)				// LED full-off pause time (unit ms, should be integer multiple of GRAD_DEC)
+#define		GRAD_ON_TIME		(5)					// LED full-on pause time (unit ms, should be integer multiple of GRAD_INC)
 //----------------------------------------------------------------------------
-static	int8_t	_ledOutStt[LED_MAX]={0};			// LED输出状态
-static	int8_t	_ledOutClk[LED_MAX]={0};			// LED输出时钟
-static	int8_t	_ledOutDty[LED_MAX]={0};			// LED输出占空（0~OUT_CYCLE，数值越大LED越亮）
+static	int8_t	_ledOutStt[LED_MAX]={0};			// LED output state
+static	int8_t	_ledOutClk[LED_MAX]={0};			// LED output clock
+static	int8_t	_ledOutDty[LED_MAX]={0};			// LED output duty (0~OUT_CYCLE, higher value = brighter LED)
 //----------------------------------------------------------------------------
-static	int8_t	_ledGrad[LED_MAX]={0};				// LED渐变开关
-static	int8_t	_ledGradDir[LED_MAX]={0};			// LED渐变方向
-static	int8_t	_ledGradCnt[LED_MAX]={0};			// LED全灭/全亮停顿计数
+static	int8_t	_ledGrad[LED_MAX]={0};				// LED gradient enable
+static	int8_t	_ledGradDir[LED_MAX]={0};			// LED gradient direction
+static	int8_t	_ledGradCnt[LED_MAX]={0};			// LED full-off/full-on pause counter
 //----------------------------------------------------------------------------
-static	int8_t	_ledBlnkClk[LED_MAX]={0};			// LED闪灯时钟（量纲0.1s）
-static	int8_t	_ledBlnkCyc[LED_MAX]={0};			// LED闪烁周期（一个亮灯+灭灯时间，量纲0.1s）
-static	int8_t	_ledBlnkDty[LED_MAX]={0};			// LED闪烁占空（一个亮灯占用时间，量纲0.1s）
-static	int8_t	_ledBlnkCnt[LED_MAX]={0};			// LED闪烁计数
-static	int8_t	_ledBlnkCry[LED_MAX]={0};			// LED闪烁次数（0表示无限闪烁）
-static	int8_t	_ledBlnkMut[LED_MAX]={0};			// LED停闪次数（0表示不停歇）
-static	int8_t	_ledBlnkCct[LED_MAX]={0};			// LED重复次数
-static	int8_t	_ledBlnkRep[LED_MAX]={0};			// LED重复闪烁次数（0表示不重复，100以上表示无限重复）
+static	int8_t	_ledBlnkClk[LED_MAX]={0};			// LED blink clock (unit 0.1s)
+static	int8_t	_ledBlnkCyc[LED_MAX]={0};			// LED blink cycle (one on + off time, unit 0.1s)
+static	int8_t	_ledBlnkDty[LED_MAX]={0};			// LED blink duty (one on occupy time, unit 0.1s)
+static	int8_t	_ledBlnkCnt[LED_MAX]={0};			// LED blink counter
+static	int8_t	_ledBlnkCry[LED_MAX]={0};			// LED blink count (0 means infinite blink)
+static	int8_t	_ledBlnkMut[LED_MAX]={0};			// LED pause blink count (0 means no pause)
+static	int8_t	_ledBlnkCct[LED_MAX]={0};			// LED repeat counter
+static	int8_t	_ledBlnkRep[LED_MAX]={0};			// LED repeat blink count (0 means no repeat, >=100 means infinite repeat)
 //----------------------------------------------------------------------------
-static	int16_t	msCnt=0;							// 输出计数器
+static	int16_t	msCnt=0;							// Output counter
 //----------------------------------------------------------------------------
 
 static void _Off(int8_t ledName)
@@ -212,9 +212,9 @@ void LED_DrvScan(void)
 
 
  /***************************************
-  * @brief  LED 初始化函数
-  * @param  无
-  * @retval 无
+  * @brief  LED initialization function
+  * @param  None
+  * @retval None
   ***************************************/
 void LED_Init(void)
 {
@@ -246,5 +246,4 @@ int8_t LED_GetNumber(void)
 {
 	return LED_NUM;
 }
-
 

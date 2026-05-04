@@ -8,12 +8,12 @@
 
 
 
-#define		LED_NUM			(1)				// LED数量
+#define		LED_NUM			(1)				// LED count
 
-	/*LED名称枚举*/
+	/* LED name enum */
 	typedef	enum	
 	{								
-		LED_Name_1	= (0x01),			// 蜂鸣器+LED PB9
+		LED_Name_1	= (0x01),			// Buzzer + LED PB9
 	}LED_Name_TypeDef;
 	//------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@
 
 
  
-/****************************** LED1 PB9 配置参数定义 ***************************************/
+/****************************** LED1 PB9 Config Parameters ***************************************/
 #define             macLED_1_GPIO_APBxClock_FUN              RCC_APB2PeriphClockCmd
 #define             macLED_1_GPIO_CLK                        RCC_APB2Periph_GPIOB
 #define             macLED_1_GPIO_PORT                       GPIOB
@@ -32,12 +32,12 @@
 
 
 
-/****************************** LED 控制宏定义 ***************************************/
+/****************************** LED Control Macro Definitions ***************************************/
 #define             macLED_1_OFF()                           GPIO_ResetBits ( macLED_1_GPIO_PORT, macLED_1_GPIO_PIN )
 #define             macLED_1_ON()                            GPIO_SetBits ( macLED_1_GPIO_PORT, macLED_1_GPIO_PIN )
 
 
-/************************** LED 函数声明 ********************************/
+/************************** LED Function Declarations ********************************/
 void LED_Init(void);
 void LED_Out(int8_t ledName, int8_t ledState);
 int8_t 	LED_GetNumber(void);

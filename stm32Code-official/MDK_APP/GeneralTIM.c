@@ -1,37 +1,35 @@
 #include "GeneralTIM.h"
 
 /*
- * 注意：TIM_TimeBaseInitTypeDef结构体里面有5个成员，TIM6和TIM7的寄存器里面只有
- * TIM_Prescaler和TIM_Period，所以使用TIM6和TIM7的时候只需初始化这两个成员即可，
- * 另外三个成员是通用定时器和高级定时器才有.
- *-----------------------------------------------------------------------------
+ * Note: TIM_TimeBaseInitTypeDef structure has 5 members for TIM6 and TIM7,
+ * but only TIM_Prescaler and TIM_Period are used. When using TIM6 or TIM7,
+ * only initialize these two members. Other members are for general and advanced timers.
+ *---------------------------------------------------------------------
  *typedef struct
- *{ TIM_Prescaler            都有
- *	TIM_CounterMode			 TIMx,x[6,7]没有，其他都有
- *  TIM_Period               都有
- *  TIM_ClockDivision        TIMx,x[6,7]没有，其他都有
- *  TIM_RepetitionCounter    TIMx,x[1,8,15,16,17]才有
+ *{ TIM_Prescaler            Prescaler
+ *	TIM_CounterMode			 TIMx,x[6,7] not available, reserved
+ *  TIM_Period               Period
+ *  TIM_ClockDivision        TIMx,x[6,7] not available, reserved
+ *  TIM_RepetitionCounter    TIMx,x[1,8,15,16,17] only
  *}TIM_TimeBaseInitTypeDef; 
- *-----------------------------------------------------------------------------
+ *---------------------------------------------------------------------
  */
 
 
 
 
 
-
-
-// 中断优先级配置
+// Interrupt priority config
 static void GENERAL_TIM_2_NVIC_Config(void)
 {
     NVIC_InitTypeDef 	NVIC_InitStructure; 
-		// 设置中断组为4
+		// Set interrupt priority group to 4
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);		
-		// 设置中断来源
+		// Set interrupt source
     NVIC_InitStructure.NVIC_IRQChannel = GENERAL_TIM_2_IRQ ;	
-		// 设置抢占优先级为 2
+		// Set preempt priority to 2
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;	 
-		// 设置子优先级为0
+		// Set sub priority to 0
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;	
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
@@ -45,54 +43,54 @@ static void GENERAL_TIM_2_NVIC_Config(void)
 
 static void GENERAL_TIM_2_Mode_Config(void)
 {
-/*--------------------时基结构体初始化-------------------------*/
+/*-------------------- Timer structure init -------------------------*/
 
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
-		// 开启定时器时钟,即内部时钟CK_INT=72M
+		// Enable timer clock, internal clock CK_INT=72M
     GENERAL_TIM_2_APBxClock_FUN(GENERAL_TIM_2_CLK, ENABLE);	
-		// 自动重装载寄存器的值，累计TIM_Period+1个频率后产生一个更新或者中断
+		// Auto-reload register value, accumulate TIM_Period+1 frequency then generate update interrupt
     TIM_TimeBaseStructure.TIM_Period=GENERAL_TIM_2_Period;
-		// 时钟预分频数
+		// Timer prescaler
     TIM_TimeBaseStructure.TIM_Prescaler= GENERAL_TIM_2_Prescaler;	
-		// 时钟分频因子 ，没用到不用管
+		// Clock division, not used, reserved
     TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;		
-		// 计数器计数模式，设置为向上计数
+		// Counter mode, set to up-counting
     TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up; 		
-		// 重复计数器的值，没用到不用管
+		// Repetition counter value, not used, reserved
 	TIM_TimeBaseStructure.TIM_RepetitionCounter=0;	
-		// 初始化定时器
+		// Initialize timer
     TIM_TimeBaseInit(GENERAL_TIM_2, &TIM_TimeBaseStructure);
 	
-		// 清除计数器中断标志位
+		// Clear timer update interrupt flag
     TIM_ClearFlag(GENERAL_TIM_2, TIM_FLAG_Update);
 	  
-		// 开启计数器中断
+		// Enable timer update interrupt
     TIM_ITConfig(GENERAL_TIM_2,TIM_IT_Update,ENABLE);
 	
-		// 使能计数器
+		// Enable counter
     TIM_Cmd(GENERAL_TIM_2, ENABLE);
 }
 
 
-/*  以上是通用定时器TIM2的相关配置 ****************************************************************************************************************************************/
+/*  End of General Timer TIM2 Configuration ****************************************************************************************************************************************/
 
 
 
 
 
 
-// 中断优先级配置
+// Interrupt priority config
 static void GENERAL_TIM_3_NVIC_Config(void)
 {
 	NVIC_InitTypeDef 	NVIC_InitStructure;
-	// 设置中断组为4
+	// Set interrupt priority group to 4
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
-	// 设置中断来源
+	// Set interrupt source
 	NVIC_InitStructure.NVIC_IRQChannel = GENERAL_TIM_3_IRQ;
-	// 设置抢占优先级为 2
+	// Set preempt priority to 2
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
-	// 设置子优先级为0
+	// Set sub priority to 0
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
@@ -106,37 +104,37 @@ static void GENERAL_TIM_3_NVIC_Config(void)
 
 static void GENERAL_TIM_3_Mode_Config(void)
 {
-	/*--------------------时基结构体初始化-------------------------*/
+	/*-------------------- Timer structure init -------------------------*/
 
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
-	// 开启定时器时钟,即内部时钟CK_INT=72M
+	// Enable timer clock, internal clock CK_INT=72M
 	GENERAL_TIM_3_APBxClock_FUN(GENERAL_TIM_3_CLK, ENABLE);
-	// 自动重装载寄存器的值，累计TIM_Period+1个频率后产生一个更新或者中断
+	// Auto-reload register value, accumulate TIM_Period+1 frequency then generate update interrupt
 	TIM_TimeBaseStructure.TIM_Period = GENERAL_TIM_3_Period;
-	// 时钟预分频数
+	// Timer prescaler
 	TIM_TimeBaseStructure.TIM_Prescaler = GENERAL_TIM_3_Prescaler;
-	// 时钟分频因子 ，没用到不用管
+	// Clock division, not used, reserved
 	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-	// 计数器计数模式，设置为向上计数
+	// Counter mode, set to up-counting
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-	// 重复计数器的值，没用到不用管
+	// Repetition counter value, not used, reserved
 	TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
-	// 初始化定时器
+	// Initialize timer
 	TIM_TimeBaseInit(GENERAL_TIM_3, &TIM_TimeBaseStructure);
 
-	// 清除计数器中断标志位
+	// Clear timer update interrupt flag
 	TIM_ClearFlag(GENERAL_TIM_3, TIM_FLAG_Update);
 
-	// 开启计数器中断
+	// Enable timer update interrupt
 	TIM_ITConfig(GENERAL_TIM_3, TIM_IT_Update, ENABLE);
 
-	// 使能计数器
+	// Enable counter
 	TIM_Cmd(GENERAL_TIM_3, DISABLE);
 }
 
 
-/*  以上是通用定时器TIM3的相关配置 ****************************************************************************************************************************************/
+/*  End of General Timer TIM3 Configuration ****************************************************************************************************************************************/
 
 
 
@@ -150,9 +148,7 @@ void GENERAL_TIM_Init(void)
 	GENERAL_TIM_3_NVIC_Config();
 	GENERAL_TIM_3_Mode_Config();
 }
-/*   以上是通用定时器TIM3的相关配置 ****************************************************************************************************************************************/
-
-
+/*   End of General Timer TIM3 Configuration ****************************************************************************************************************************************/
 
 
 

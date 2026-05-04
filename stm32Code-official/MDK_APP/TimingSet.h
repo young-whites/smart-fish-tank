@@ -3,13 +3,13 @@
 #include "sys.h"
 
 
-void Timing_1s		(void);	/*1s   扫描时间进入的执行函数*/
-void Timing_1ms	    (void);	/*1ms  扫描时间进入的执行函数*/
-void Timing_2ms		(void);	/*2ms  扫描时间进入的执行函数*/
-void Timing_5ms		(void);	/*5ms  扫描时间进入的执行函数*/
-void Timing_10ms    (void); /*10ms 扫描时间进入的执行函数*/
-void Timing_50ms    (void); /*50ms 扫描时间进入的执行函数*/
-void Timing_500ms   (void); /*500ms扫描时间进入的执行函数*/
+void Timing_1s		(void);	/*1s   Timer scan execution function*/
+void Timing_1ms	    (void);	/*1ms  Timer scan execution function*/
+void Timing_2ms		(void);	/*2ms  Timer scan execution function*/
+void Timing_5ms		(void);	/*5ms  Timer scan execution function*/
+void Timing_10ms    (void); /*10ms Timer scan execution function*/
+void Timing_50ms    (void); /*50ms Timer scan execution function*/
+void Timing_500ms   (void); /*500ms Timer scan execution function*/
 
 
 

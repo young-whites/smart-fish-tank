@@ -11,7 +11,7 @@
 
 
 
-/******************** BEEP 引脚配置参数定义 **************************/
+/******************** BEEP Pin Configuration Parameters **************************/
 #define             macBEEP_GPIO_APBxClock_FUN              RCC_APB2PeriphClockCmd
 #define             macBEEP_GPIO_CLK                        RCC_APB2Periph_GPIOB
 #define             macBEEP_PORT                            GPIOB
@@ -19,13 +19,13 @@
 
 
 
-/******************** BEEP 函数宏定义 **************************/
+/******************** BEEP Function Macro Definitions **************************/
 #define             macBEEP_OFF()	                        GPIO_ResetBits ( macBEEP_PORT, macBEEP_PIN )
 #define             macBEEP_ON()                         	GPIO_SetBits ( macBEEP_PORT, macBEEP_PIN )
 
 
 
-/************************** BEEP 函数声明********************************/
+/************************** BEEP Function Declarations ********************************/
 void Beep_Init(void);
 void BEEP_Off(void);
 void BEEP_On(void);

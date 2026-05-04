@@ -9,9 +9,9 @@
 #include "bsp_adc.h"
 
 /*******************************************/
-/*              �ж����ȼ�����             */
+/*              Interrupt Priority          */
 /*-----------------------------------------*/
-/*	TIM2    -> �����ȼ���2  �����ȼ���0
+/*	TIM2    -> Preempt priority 2  Sub priority 0
  */
 
 int main ( void )
@@ -27,7 +27,7 @@ int main ( void )
 	DS18B20_Init();
 	ADC_Polling_Init();
 
-	/* 继电器 GPIO 初始化 */
+	/* Relay GPIO initialization */
 	{
 		GPIO_InitTypeDef GPIO_InitStructure;
 		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
@@ -39,12 +39,12 @@ int main ( void )
 		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
 		GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-		/* 默认关闭所有继电器 */
+		/* Default: turn off all relays */
 		GPIO_ResetBits(GPIOB, GPIO_Pin_12 | GPIO_Pin_14 | GPIO_Pin_15);
 		GPIO_ResetBits(GPIOA, GPIO_Pin_15);
 	}
 
-	/* ȫ�ֲ�����ʼ�� */
+	/* Global variable initialization */
 	Flag.currentPage = 0;
 	Flag.subPage = 0;
 	Flag.thresholdField = 0;
@@ -70,7 +70,7 @@ int main ( void )
 	Record.waterLevelMin = 40;
 	Record.waterLevelMax = 80;
 
-	/* ��ʾ�������� */
+	/* Show startup screen */
 	OLED_ShowStart();
 	delay_ms(2000);
 	OLED_Clr_Screen();
@@ -81,14 +81,14 @@ int main ( void )
 
 		while ( 1 )
 		{
-			/* 页面变化检测和清屏 */
+			/* Page change detection and clear screen */
 			curPage = Flag.currentPage * 10 + Flag.subPage;
 			if (curPage != lastPage) {
 				lastPage = curPage;
 				OLED_Clr_Screen();
 			}
 
-			/* 刷新OLED显示 */
+			/* Refresh OLED display */
 			OLED_Show_Page(Flag.currentPage);
 
 			delay_ms(100);
