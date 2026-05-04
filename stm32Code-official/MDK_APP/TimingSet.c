@@ -97,43 +97,35 @@ void Timing_2ms(void)
 
 void Timing_5ms(void)
 {
-	/* ADC non-blocking polling: check EOC, skip if not ready */
-	static uint8_t adcCh = 0;
-	static uint8_t adcPending = 0;  /* 0=idle, 1=conversion started */
+	/* ADC sequential read: all 3 channels every 15ms */
+	static uint8_t adcTick = 0;
+	adcTick++;
+	if (adcTick >= 3) {
+		adcTick = 0;
 
-	if (!adcPending) {
-		/* Start conversion for current channel */
-		switch (adcCh) {
-			case 0: ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5); break;  /* Water level PA1 */
-			case 1: ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5); break;  /* PH PA0 */
-			case 2: ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5); break;  /* Air quality PA4 */
-		}
+		/* Read water level PA1 (Channel 1) */
+		ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-		adcPending = 1;
-	} else {
-		/* Check if conversion complete */
-		if (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC)) {
-			uint16_t val = ADC_GetConversionValue(ADC1);
-			switch (adcCh) {
-				case 0:
-					Record.waterLevel = (uint8_t)(val * 100.0f / 4095.0f);
-					if (Record.waterLevel > 100) Record.waterLevel = 100;
-					break;
-				case 1:
-					Record.phValue = val * 14.0f / 4095.0f;
-					if (Record.phValue > 14.0f) Record.phValue = 14.0f;
-					if (Record.phValue < 0.0f) Record.phValue = 0.0f;
-					break;
-				case 2:
-					Record.airQuality = val;
-					break;
-			}
-			adcCh = (adcCh + 1) % 3;
-			adcPending = 0;
-		}
-		/* If EOC not set, skip this cycle - will retry next 5ms */
+		while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+		Record.waterLevel = (uint8_t)(ADC_GetConversionValue(ADC1) * 100.0f / 4095.0f);
+		if (Record.waterLevel > 100) Record.waterLevel = 100;
+
+		/* Read PH PA0 (Channel 0) */
+		ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5);
+		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
+		while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+		Record.phValue = ADC_GetConversionValue(ADC1) * 14.0f / 4095.0f;
+		if (Record.phValue > 14.0f) Record.phValue = 14.0f;
+		if (Record.phValue < 0.0f) Record.phValue = 0.0f;
+
+		/* Read air quality PA4 (Channel 4) */
+		ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 1, ADC_SampleTime_55Cycles5);
+		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
+		while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+		Record.airQuality = ADC_GetConversionValue(ADC1);
 	}
 }
+
 
 
 
