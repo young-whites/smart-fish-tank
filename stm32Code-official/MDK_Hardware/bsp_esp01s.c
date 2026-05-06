@@ -460,6 +460,7 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
         if (len >= 1) {
             Record.runMode = payload[0] ? 1 : 0;
             Flag.manualTimeout = 60;
+            ESP01S_SendDeviceStatus();
         }
         break;
 
@@ -497,6 +498,7 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
             Record.phUpper       = ParseFloatLE(&payload[14]);
             Record.waterLevelMin = payload[18];
             Record.waterLevelMax = payload[19];
+            ESP01S_SendDeviceStatus();
         }
         break;
 
@@ -520,6 +522,7 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
         /* LEN=2: seconds(uint16 BE) */
         if (len >= 2) {
             Record.feedInterval = ParseU16BE(&payload[0]);
+            ESP01S_SendDeviceStatus();
         }
         break;
 
