@@ -47,6 +47,9 @@ static volatile uint16_t s_ringTail = 0;   /* Read index (main) */
 uint8_t ESP01S_WiFiConnected = 0;
 static uint8_t s_clientLinkId = 0;         /* Connected client link ID */
 static uint8_t s_clientConnected = 0;      /* 0=no client, 1=client connected */
+static volatile uint32_t s_connectCount = 0;   /* Debug: total connections received */
+static volatile uint32_t s_disconnectCount = 0; /* Debug: total disconnections */
+static volatile uint32_t s_ipdCount = 0;        /* Debug: total +IPD received */
 
 /* ======================== USART2 Init ======================== */
 static void ESP01S_USART_Init(void)
@@ -235,18 +238,15 @@ static uint8_t ESP01S_SendCmd(const char* cmd, const char* ack, uint16_t timeout
 
         /* Check for expected ack */
         if (RingBuf_Contains(ack)) {
-            RingBuf_Flush();
             return 1;
         }
 
         /* Check for ERROR response */
         if (RingBuf_Contains("ERROR") || RingBuf_Contains("FAIL")) {
-            RingBuf_Flush();
             return 0;
         }
     }
 
-    RingBuf_Flush();
     return 0;  /* Timeout */
 }
 
@@ -336,7 +336,11 @@ static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, 
 
     /* AT+CIPSEND=<link_id>,<length> */
     sprintf(cipSendCmd, "AT+CIPSEND=%d,%d", link_id, (int)frameLen);
-    if (!ESP01S_SendCmd(cipSendCmd, ">", 1000)) return;
+    if (!ESP01S_SendCmd(cipSendCmd, ">", 2000)) {
+        /* Retry once after brief delay */
+        delay_ms(100);
+        if (!ESP01S_SendCmd(cipSendCmd, ">", 2000)) return;
+    }
 
     /* Send raw frame data */
     USART_SendBytes(frame, frameLen);
@@ -705,6 +709,7 @@ void ESP01S_Process(void)
                 if (i > 0 && scanBuf[i - 1] >= '0' && scanBuf[i - 1] <= '4') {
                     s_clientLinkId = scanBuf[i - 1] - '0';
                     s_clientConnected = 1;
+                    s_connectCount++;
                 }
                 RingBuf_SkipUntil(",CONNECT");
                 if (s_ringHead >= s_ringTail)
@@ -723,6 +728,7 @@ void ESP01S_Process(void)
         for (i = 0; i + 7 <= scanCount; i++) {
             if (memcmp(&scanBuf[i], ",CLOSED", 7) == 0) {
                 s_clientConnected = 0;
+                s_disconnectCount++;
                 RingBuf_SkipUntil(",CLOSED");
                 if (s_ringHead >= s_ringTail)
                     count = s_ringHead - s_ringTail;
