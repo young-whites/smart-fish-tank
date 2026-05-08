@@ -256,34 +256,47 @@ static uint8_t ESP01S_SendCmd(const char* cmd, const char* ack, uint16_t timeout
  */
 static uint8_t AT_WaitOK(const char* cmd, uint16_t timeout)
 {
-    return ESP01S_SendCmd(cmd, "OK", timeout);
+    if (ESP01S_SendCmd(cmd, "OK", timeout)) return 1;
+    if (ESP01S_SendCmd(cmd, "no change", 500)) return 1;
+    return 0;
 }
 
 /* ======================== Initialization Sequence ======================== */
 
 static void ESP01S_ConfigSequence(void)
 {
-    /* Step 1: Check module alive */
+    /* Step 1: Reset module to clean state */
+    ESP01S_SendCmd("AT+RST", "ready", 5000);
+    delay_ms(1000);
+
+    /* Step 2: Check module alive */
     if (!AT_WaitOK("AT", 2000)) {
-        /* Retry once after 1s delay */
         delay_ms(1000);
         AT_WaitOK("AT", 2000);
     }
 
-    /* Step 2: Set AP mode */
+    /* Step 3: Set AP mode */
     AT_WaitOK("AT+CWMODE=2", 2000);
 
-    /* Step 3: Create AP: SSID=FishTank, password=12345678, ch=1, enc=WPA2 */
+    /* Step 4: Create AP: SSID=FishTank, password=12345678, ch=1, enc=WPA2 */
     AT_WaitOK("AT+CWSAP=\"FishTank\",\"12345678\",1,3", 3000);
+    delay_ms(1000);
 
-    /* Step 4: Enable multiple connections */
+    /* Step 5: Enable multiple connections */
     AT_WaitOK("AT+CIPMUX=1", 2000);
 
-    /* Step 5: Start TCP server on port 8080 */
-    AT_WaitOK("AT+CIPSERVER=1,8080", 2000);
+    /* Step 6: Start TCP server on port 8080 */
+    if (!AT_WaitOK("AT+CIPSERVER=1,8080", 2000)) {
+        /* Retry once: server might need more time after AP creation */
+        delay_ms(1000);
+        AT_WaitOK("AT+CIPSERVER=1,8080", 2000);
+    }
 
-    /* Step 6: Server timeout 120 seconds */
+    /* Step 7: Server timeout 120 seconds */
     AT_WaitOK("AT+CIPSTO=120", 2000);
+
+    /* Step 8: Verify AP IP address */
+    ESP01S_SendCmd("AT+CIFSR", "192.168.4.1", 2000);
 }
 
 /* ======================== Frame TX ======================== */
@@ -842,6 +855,8 @@ void ESP01S_Process(void)
 
 /* ======================== Public Init ======================== */
 
+#include "bsp_beep.h"
+
 void ESP01S_Init(void)
 {
     /* Initialize USART2 for ESP-01S communication */
@@ -853,6 +868,10 @@ void ESP01S_Init(void)
 
     /* Run AT command configuration sequence */
     ESP01S_ConfigSequence();
+
+    /* Success indication: 2 short beeps */
+    BEEP_SetCycleDuty(150, 80);
+    BEEP_Blink(2, 1, 1);
 }
 
 /* ======================== End of File ======================== */
