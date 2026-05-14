@@ -7,6 +7,7 @@
 #include "MyTypedef.h"
 #include "ds18b20.h"
 #include "bsp_adc.h"
+#include "bsp_esp01s.h"
 #include "TimingSet.h"
 
 extern volatile uint32_t TimeCnt_ms;
@@ -29,6 +30,7 @@ int main ( void )
 	OLED_Init();
 	DS18B20_Init();
 	ADC_Polling_Init();
+	ESP01S_Init();
 
 	/* Relay GPIO initialization */
 	{
@@ -136,6 +138,8 @@ int main ( void )
 
 						/* Refresh OLED display */
 			OLED_Show_Page(Flag.currentPage);
+
+			ESP01S_Process();
 
 			delay_ms(100);
 		}
