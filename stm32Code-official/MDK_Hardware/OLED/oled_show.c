@@ -4,10 +4,7 @@
 
 extern uint8_t ESP01S_WiFiConnected;
 
-/*****************************************************************************
-* 名称:   OLED_ShowNumF6X12_Float
-* 功能:   在指定位置显示浮点数
-*****************************************************************************/
+
 void OLED_ShowNumF6X12_Float(uint8_t row, uint8_t column, float num, uint8_t decimal)
 {
 	int intPart, decPart;
@@ -40,7 +37,7 @@ void OLED_ShowNumF6X12_Float(uint8_t row, uint8_t column, float num, uint8_t dec
 	}
 }
 
-/* ===== 辅助函数 ===== */
+
 static void _ShowOnOff(uint8_t row, uint8_t col, uint8_t state)
 {
 	if (state) {
@@ -88,7 +85,7 @@ static void _ShowFeedStatus(uint8_t row, uint8_t col)
 	}
 }
 
-/* 页码指示器 */
+
 static void _ShowPageIndicator(void)
 {
 	uint8_t mainP = Flag.currentPage + 1;
@@ -98,9 +95,6 @@ static void _ShowPageIndicator(void)
 	OLED_ShowNumF6X12(0, 114, 1, (uint32_t)subP);
 }
 
-/* ================================================================
- *  启动画面
- * ================================================================ */
 void OLED_ShowStart(void)
 {
 	uint8_t col;
@@ -142,24 +136,22 @@ void OLED_ShowStart(void)
 	OLED_Show_OneCharF6X12(6, col, '4'); col+=6;
 }
 
-/* ================================================================
- *  主页面 1 - 数据显示
- * ================================================================ */
+
 static void _Main_Sub0(void)
 {
 	_ShowPageIndicator();
-	/* row2: 水温 */
+
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xcb\xae", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xce\xc2", 0);
 	OLED_Show_OneCharF6X12(2, 24, ':');
 	OLED_ShowNumF6X12_Float(2, 30, Record.waterTemp, 1);
 	OLED_Show_OneCharF6X12(2, 54, 'C');
-	/* row2右: PH */
+
 	OLED_Show_OneCharF6X12(2, 72, 'P');
 	OLED_Show_OneCharF6X12(2, 78, 'H');
 	OLED_Show_OneCharF6X12(2, 84, ':');
 	OLED_ShowNumF6X12_Float(2, 90, Record.phValue, 1);
-	/* row6: 状态栏 */
+
 	_ShowWiFi(6, 0);
 	_ShowMode(6, 30);
 	_ShowFeedStatus(6, 66);
@@ -174,13 +166,13 @@ static void _Main_Sub1(void)
 	OLED_Show_OneCharF6X12(2, 24, ':');
 	OLED_ShowNumF6X12(2, 30, 3, (uint32_t)Record.waterLevel);
 	OLED_Show_OneCharF6X12(2, 48, '%');
-	/* row2右: 空气 */
+
 	OLED_Show_OneCharF6X12(2, 66, 'A');
 	OLED_Show_OneCharF6X12(2, 72, 'Q');
 	OLED_Show_OneCharF6X12(2, 78, 'I');
 	OLED_Show_OneCharF6X12(2, 84, ':');
 	OLED_ShowNumF6X12(2, 90, 2, (uint32_t)Record.airQuality);
-	/* row6: 加热+加水 */
+
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 0,  (uint8_t*)"\xbc\xd3", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 12, (uint8_t*)"\xc8\xc8", 0);
 	OLED_Show_OneCharF6X12(6, 24, ':');
@@ -194,7 +186,7 @@ static void _Main_Sub1(void)
 static void _Main_Sub2(void)
 {
 	_ShowPageIndicator();
-	/* row2: 排水+增氧 */
+
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xc5\xc5", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xcb\xae", 0);
 	OLED_Show_OneCharF6X12(2, 24, ':');
@@ -215,15 +207,11 @@ static void _Main_Sub2(void)
 	_ShowMode(6, 90);
 }
 
-/* ================================================================
- *  主页面 2 - 阈值设置 (上下限各占一行, KEY5切换选中)
- * ================================================================ */
 
-/* 子2-1: 温度 */
 static void _Threshold_Sub0(void)
 {
 	_ShowPageIndicator();
-	/* row2: 总览 */
+
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 0,  (uint8_t*)"\xce\xc2", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(2, 12, (uint8_t*)"\xb6\xc8", 0);
 	OLED_Show_OneCharF6X12(2, 24, ':');
@@ -231,14 +219,14 @@ static void _Threshold_Sub0(void)
 	OLED_Show_OneCharF6X12(2, 54, '~');
 	OLED_ShowNumF6X12_Float(2, 60, Record.tempUpper, 1);
 
-	/* row4: 下限 - 光标 */
+
 	OLED_Show_OneCharF6X12(4, 0, (Flag.thresholdField == 0) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xcf\xc2", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)"\xcf\xde", 0);
 	OLED_Show_OneCharF6X12(4, 30, ':');
 	OLED_ShowNumF6X12_Float(4, 36, Record.tempLower, 1);
 
-	/* row6: 上限 - 光标 */
+
 	OLED_Show_OneCharF6X12(6, 0, (Flag.thresholdField == 1) ? '>' : ' ');
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 6,  (uint8_t*)"\xc9\xcf", 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(6, 18, (uint8_t*)"\xcf\xde", 0);
@@ -253,7 +241,7 @@ static void _Threshold_Sub0(void)
 	OLED_Show_OneCharF6X12(6, 102, 'w');
 }
 
-/* 子2-2: 空气 (只有上限) */
+
 static void _Threshold_Sub1(void)
 {
 	_ShowPageIndicator();
@@ -282,7 +270,7 @@ static void _Threshold_Sub1(void)
 	OLED_Show_OneCharF6X12(6, 60, '0');
 }
 
-/* 子2-3: 水位 */
+
 static void _Threshold_Sub2(void)
 {
 	_ShowPageIndicator();
@@ -315,7 +303,7 @@ static void _Threshold_Sub2(void)
 	OLED_Show_OneCharF6X12(6, 102, 'w');
 }
 
-/* 子2-4: PH */
+
 static void _Threshold_Sub3(void)
 {
 	_ShowPageIndicator();
@@ -373,9 +361,7 @@ static void _Threshold_Sub4(void)
 	OLED_Show_OneCharF6X12(6, 72, 's');
 }
 
-/* ================================================================
- *  主页面 3 - 手动控制
- * ================================================================ */
+
 static void _ShowClearRow(uint8_t row)
 {
 	uint8_t i;
@@ -431,7 +417,7 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 		ZoneBitCode_OLED_Show_ChineseF6X12(2, 36, (uint8_t*)"\xd6\xc6", 0);
 	}
 
-	/* 模式变化时清除 row4 和 row6 */
+
 	if (lastMode != Record.runMode) {
 		lastMode = Record.runMode;
 		_ShowClearRow(4);
@@ -439,13 +425,13 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	}
 
 	if (Record.runMode == 0) {
-		/* 自动模式: 显示"自动模式!"，所有子页面统一显示 */
+
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)"\xd7\xd4", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)"\xb6\xaf", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 30, (uint8_t*)"\xc4\xa3", 0);
 		ZoneBitCode_OLED_Show_ChineseF6X12(4, 42, (uint8_t*)"\xca\xbd", 0);
 		OLED_Show_OneCharF6X12(4, 54, '!');
-		/* row6: 提示按键 */
+
 		OLED_Show_OneCharF6X12(6, 0,  'K');
 		OLED_Show_OneCharF6X12(6, 6,  '3');
 		OLED_Show_OneCharF6X12(6, 12, ':');
@@ -454,7 +440,6 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 		return;
 	}
 
-	/* 手动模式: 显示继电器控制 */
 	OLED_Show_OneCharF6X12(4, 0, '>');
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 6,  (uint8_t*)name_gbk, 0);
 	ZoneBitCode_OLED_Show_ChineseF6X12(4, 18, (uint8_t*)(name_gbk + 2), 0);
@@ -469,7 +454,6 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 		OLED_Show_OneCharF6X12(4, 48, 'F');
 	}
 
-	/* row6: 操作提示 */
 	OLED_Show_OneCharF6X12(6, 0,  'K');
 	OLED_Show_OneCharF6X12(6, 6,  '3');
 	OLED_Show_OneCharF6X12(6, 12, ':');
@@ -487,9 +471,6 @@ static void _Manual_Sub(const char* name_gbk, uint8_t* relayState)
 	}
 }
 
-/* ================================================================
- *  主调度函数
- * ================================================================ */
 void OLED_Show_Page(uint8_t page)
 {
 	uint8_t sub = Flag.subPage;
