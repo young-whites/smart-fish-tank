@@ -140,6 +140,15 @@ int main ( void )
 		/* Refresh OLED display */
 		OLED_Show_Page(Flag.currentPage);
 
+		/* Sensor data upload to APP (~1s interval) */
+		{
+			static uint32_t uploadCnt = 0;
+			if (++uploadCnt >= 10) {  /* ~1s at 100ms loop */
+				uploadCnt = 0;
+				ESP01S_SendSensorData();
+			}
+		}
+
 		ESP01S_Process();
 
 		delay_ms(100);

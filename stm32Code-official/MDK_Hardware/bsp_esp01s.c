@@ -11,6 +11,7 @@
 #include "bsp_esp01s.h"
 #include "bsp_led.h"
 #include "systick_delay.h"
+#include "MyTypedef.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -28,7 +29,7 @@
 #define FRAME_OVERHEAD          5       /* HEAD+CMD+LEN+SUM+END */
 
 /* TX commands (MCU -> APP) */
-#define CMD_TEST_DATA           0x01    /* Test data frame */
+#define CMD_SENSOR_DATA         0x01    /* Sensor data upload (14 bytes) */
 
 /* RX commands (APP -> MCU) */
 #define CMD_ECHO_REQUEST        0x10    /* APP sends echo, MCU responds */
@@ -419,12 +420,38 @@ static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, 
 
 /* ======================== Public TX Functions ======================== */
 
-void ESP01S_SendTestData(void)
+void ESP01S_SendSensorData(void)
 {
-    uint8_t payload[4] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t payload[14];
+
     if (!s_clientConnected) return;
-    ESP01S_SendFrame(s_clientLinkId, CMD_TEST_DATA, payload, 4);
-    printf("[TX] Test frame sent (4 bytes)\r\n");
+
+    /* Pack WaterTemp (float, 4 bytes) */
+    memcpy(&payload[0], &Record.waterTemp, 4);
+
+    /* Pack PH_Value (float, 4 bytes) */
+    memcpy(&payload[4], &Record.phValue, 4);
+
+    /* Pack WaterLevel (uint8, 1 byte) */
+    payload[8] = Record.waterLevel;
+
+    /* Pack AirQuality (uint16, big-endian, 2 bytes) */
+    payload[9]  = (uint8_t)(Record.airQuality >> 8);
+    payload[10] = (uint8_t)(Record.airQuality & 0xFF);
+
+    /* Pack RunMode (uint8, 1 byte) */
+    payload[11] = Record.runMode;
+
+    /* Pack FeedCountdown (int16 -> uint16 big-endian, clamp negative to 0) */
+    {
+        uint16_t fc = (Record.feedCountdown > 0) ? (uint16_t)Record.feedCountdown : 0;
+        payload[12] = (uint8_t)(fc >> 8);
+        payload[13] = (uint8_t)(fc & 0xFF);
+    }
+
+    ESP01S_SendFrame(s_clientLinkId, CMD_SENSOR_DATA, payload, 14);
+    printf("[TX] Sensor data: T=%.1f PH=%.1f WL=%d%%\r\n",
+           Record.waterTemp, Record.phValue, Record.waterLevel);
 }
 
 uint8_t ESP01S_IsClientConnected(void)
