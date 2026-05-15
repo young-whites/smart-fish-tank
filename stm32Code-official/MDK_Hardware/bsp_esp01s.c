@@ -33,6 +33,10 @@
 
 /* RX commands (APP -> MCU) */
 #define CMD_ECHO_REQUEST        0x10    /* APP sends echo, MCU responds */
+#define CMD_SWITCH_MODE         0x11    /* APP -> MCU: switch auto/manual mode */
+#define CMD_CONTROL_RELAY       0x12    /* APP -> MCU: control relay */
+#define CMD_TRIGGER_FEED        0x14    /* APP -> MCU: trigger feeding */
+#define CMD_SET_ALARM           0x15    /* APP -> MCU: set alarm enable/disable */
 #define CMD_LED_CONTROL         0x20    /* APP controls LED: payload=[led_id, state] */
 
 /* ======================== Ring Buffer ======================== */
@@ -651,6 +655,40 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
                 LED_Off(LED_Name_1);
             }
             printf("[LED] LED1 %s\r\n", state ? "ON" : "OFF");
+        }
+        break;
+    case CMD_SWITCH_MODE:
+        /* LEN>=1: mode(0=auto, 1=manual) */
+        if (len >= 1) {
+            Record.runMode = payload[0] ? 1 : 0;
+            printf("[RX] Switch mode: %s\r\n", Record.runMode ? "MANUAL" : "AUTO");
+        }
+        break;
+    case CMD_CONTROL_RELAY:
+        /* LEN>=2: relay_id(0-3), state(0=OFF,1=ON) */
+        if (len >= 2) {
+            uint8_t relayId = payload[0];
+            uint8_t state = payload[1] ? 1 : 0;
+            switch (relayId) {
+                case 0: Flag.relayHeat   = state; printf("[RX] Relay Heat: %s\r\n", state ? "ON" : "OFF"); break;
+                case 1: Flag.relayFill   = state; printf("[RX] Relay Fill: %s\r\n", state ? "ON" : "OFF"); break;
+                case 2: Flag.relayDrain  = state; printf("[RX] Relay Drain: %s\r\n", state ? "ON" : "OFF"); break;
+                case 3: Flag.relayOxygen = state; printf("[RX] Relay Oxygen: %s\r\n", state ? "ON" : "OFF"); break;
+                default: printf("[RX] Unknown relay ID: %d\r\n", relayId); break;
+            }
+        }
+        break;
+    case CMD_TRIGGER_FEED:
+        /* LEN>=0: no payload */
+        Flag.feeding = 1;
+        Record.feedCountdown = 0;
+        printf("[RX] Trigger feed\r\n");
+        break;
+    case CMD_SET_ALARM:
+        /* LEN>=1: enabled(0=off,1=on) */
+        if (len >= 1) {
+            Flag.alarmEnable = payload[0] ? 1 : 0;
+            printf("[RX] Alarm enable: %s\r\n", Flag.alarmEnable ? "ON" : "OFF");
         }
         break;
     default:
