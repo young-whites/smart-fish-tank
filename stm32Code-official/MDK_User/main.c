@@ -143,7 +143,7 @@ int main ( void )
 		/* Sensor data upload to APP (~1s interval) */
 		{
 			static uint32_t uploadCnt = 0;
-			if (++uploadCnt >= 10) {  /* ~1s at 100ms loop */
+			if (++uploadCnt >= 30) {  /* ~3s at 100ms loop - prevent ESP blocking from starving main loop */
 				uploadCnt = 0;
 				ESP01S_SendSensorData();
 			}

@@ -390,13 +390,9 @@ static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, 
     /* AT+CIPSEND=<link_id>,<length> */
     sprintf(cipSendCmd, "AT+CIPSEND=%d,%d", link_id, (int)frameLen);
     printf("[SEND] CMD: %s\r\n", cipSendCmd);
-    if (!ESP01S_SendCmd(cipSendCmd, ">", 2000)) {
-        printf("[SEND] First attempt failed, retry...\r\n");
-        delay_ms(100);
-        if (!ESP01S_SendCmd(cipSendCmd, ">", 2000)) {
-            printf("[SEND] FAILED - no > prompt\r\n");
-            return;
-        }
+    if (!ESP01S_SendCmd(cipSendCmd, ">", 1000)) {
+        printf("[SEND] FAILED - no > prompt\r\n");
+        return;
     }
     printf("[SEND] Got > prompt, sending frame...\r\n");
 
@@ -404,27 +400,36 @@ static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, 
 
     {
         uint16_t elapsed = 0;
-        while (elapsed < 500) {
+        while (elapsed < 200) {
             delay_ms(10);
             elapsed += 10;
             if (RingBuf_Contains("SEND OK")) {
                 printf("[SEND] SEND OK confirmed\r\n");
-                RingBuf_Flush();
+                RingBuf_SkipUntil("SEND OK");
                 return;
             }
         }
         printf("[SEND] Timeout waiting for SEND OK\r\n");
-        RingBuf_Flush();
+        RingBuf_SkipUntil("SEND OK");
     }
 }
 
 /* ======================== Public TX Functions ======================== */
 
+extern volatile uint32_t TimeCnt_ms;  /* Defined in stm32f10x_it.c */
+
 void ESP01S_SendSensorData(void)
 {
+    static uint32_t lastSendTick = 0;
+    uint32_t now;
     uint8_t payload[14];
 
     if (!s_clientConnected) return;
+
+    /* Rate limit: skip if less than 2s since last send */
+    now = TimeCnt_ms;
+    if ((now - lastSendTick) < 2000) return;
+    lastSendTick = now;
 
     /* Pack WaterTemp (float, 4 bytes) */
     memcpy(&payload[0], &Record.waterTemp, 4);
@@ -840,7 +845,6 @@ void ESP01S_Process(void)
 
         if (!foundIPD && scanCount > 0) {
             static uint32_t lastNoIpdDbg = 0;
-            extern volatile uint32_t TimeCnt_ms;
             if ((TimeCnt_ms - lastNoIpdDbg) >= 3000 && scanCount > 4) {
                 lastNoIpdDbg = TimeCnt_ms;
                 printf("[IPD] No +IPD found in %d bytes: ", scanCount);
