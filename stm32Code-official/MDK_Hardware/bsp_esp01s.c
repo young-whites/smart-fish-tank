@@ -3,12 +3,16 @@
  * @brief   ESP-01S WiFi module driver (AP mode + TCP server + custom protocol)
  *
  * Hardware: ESP-01S on USART2 (PA2=TX, PA3=RX), 115200 baud
+ * Note:     RST/EN pins are NOT physically connected on this board.
  * Protocol: 0xAA | CMD | LEN | PAYLOAD | CHECKSUM | 0x55
  * TCP port: 8080
  */
 
 #include "bsp_esp01s.h"
+#include "bsp_led.h"
+#include "systick_delay.h"
 #include "MyTypedef.h"
+#include <stdio.h>
 #include <string.h>
 
 /* ======================== Configuration ======================== */
@@ -25,18 +29,15 @@
 #define FRAME_OVERHEAD          5       /* HEAD+CMD+LEN+SUM+END */
 
 /* TX commands (MCU -> APP) */
-#define CMD_SENSOR_DATA         0x01
-#define CMD_DEVICE_STATUS       0x02
-#define CMD_ALARM_EVENT         0x03
+#define CMD_SENSOR_DATA         0x01    /* Sensor data upload (14 bytes) */
 
 /* RX commands (APP -> MCU) */
-#define CMD_QUERY_STATUS        0x10
-#define CMD_SWITCH_MODE         0x11
-#define CMD_CONTROL_RELAY       0x12
-#define CMD_SYNC_THRESHOLDS     0x13
-#define CMD_TRIGGER_FEED        0x14
-#define CMD_SET_ALARM           0x15
-#define CMD_SET_FEED_INTERVAL   0x16
+#define CMD_ECHO_REQUEST        0x10    /* APP sends echo, MCU responds */
+#define CMD_SWITCH_MODE         0x11    /* APP -> MCU: switch auto/manual mode */
+#define CMD_CONTROL_RELAY       0x12    /* APP -> MCU: control relay */
+#define CMD_TRIGGER_FEED        0x14    /* APP -> MCU: trigger feeding */
+#define CMD_SET_ALARM           0x15    /* APP -> MCU: set alarm enable/disable */
+#define CMD_LED_CONTROL         0x20    /* APP controls LED: payload=[led_id, state] */
 
 /* ======================== Ring Buffer ======================== */
 static volatile uint8_t  s_ringBuf[ESP01S_RINGBUF_SIZE];
@@ -96,8 +97,6 @@ static void ESP01S_USART_Init(void)
 /* ======================== USART2 IRQ Handler ======================== */
 /**
  * @brief  USART2 interrupt handler - push received bytes into ring buffer.
- *         Also monitors for WiFi connect/disconnect and +IPD patterns
- *         by appending bytes into the ring buffer for main-loop parsing.
  */
 void USART2_IRQHandler(void)
 {
@@ -146,7 +145,6 @@ static int RingBuf_Contains(const char* keyword)
     uint16_t len = strlen(keyword);
     uint16_t count, i;
 
-    /* Calculate available bytes */
     if (s_ringHead >= s_ringTail)
         count = s_ringHead - s_ringTail;
     else
@@ -154,7 +152,6 @@ static int RingBuf_Contains(const char* keyword)
 
     if (count < len) return 0;
 
-    /* Linear scan through ring buffer */
     for (i = 0; i <= count - len; i++) {
         uint16_t idx = (s_ringTail + i) % ESP01S_RINGBUF_SIZE;
         uint16_t j;
@@ -194,7 +191,6 @@ static int RingBuf_SkipUntil(const char* keyword)
             }
         }
         if (match) {
-            /* Advance tail past the keyword */
             s_ringTail = (idx + len) % ESP01S_RINGBUF_SIZE;
             return 1;
         }
@@ -207,9 +203,6 @@ static void RingBuf_Flush(void)
 {
     s_ringTail = s_ringHead;
 }
-
-/** Millisecond delay using the delay_init-based delay_ms */
-extern void delay_ms(uint16_t nms);
 
 /* ======================== AT Command Engine ======================== */
 
@@ -224,24 +217,17 @@ static uint8_t ESP01S_SendCmd(const char* cmd, const char* ack, uint16_t timeout
 {
     uint16_t elapsed = 0;
 
-    /* Flush stale data */
     RingBuf_Flush();
-
-    /* Send command with \r\n */
     USART_SendString(cmd);
     USART_SendString("\r\n");
 
-    /* Poll for ack */
     while (elapsed < timeout_ms) {
         delay_ms(50);
         elapsed += 50;
 
-        /* Check for expected ack */
         if (RingBuf_Contains(ack)) {
             return 1;
         }
-
-        /* Check for ERROR response */
         if (RingBuf_Contains("ERROR") || RingBuf_Contains("FAIL")) {
             return 0;
         }
@@ -263,40 +249,109 @@ static uint8_t AT_WaitOK(const char* cmd, uint16_t timeout)
 
 /* ======================== Initialization Sequence ======================== */
 
+/**
+ * @brief  AT configuration sequence.
+ *         RST/EN pins are NOT connected, so hardware reset is replaced
+ *         with a power-on delay to let ESP-01S self-boot complete.
+ */
 static void ESP01S_ConfigSequence(void)
 {
-    /* Step 1: Reset module to clean state */
-    ESP01S_SendCmd("AT+RST", "ready", 5000);
-    delay_ms(1000);
+    uint8_t ok;
 
-    /* Step 2: Check module alive */
-    if (!AT_WaitOK("AT", 2000)) {
-        delay_ms(1000);
-        AT_WaitOK("AT", 2000);
+    printf("[CFG] Step1: Power-on delay (RST/EN not connected)...\r\n");
+    delay_ms(1000);  /* Wait for ESP-01S power-on self-boot */
+    printf("[CFG] Step1: Done.\r\n");
+
+    /* Step 2: Check module alive - auto baud rate detection */
+    printf("[CFG] Step2: AT check (auto baud)...\r\n");
+    ok = AT_WaitOK("AT", 2000);
+    if (!ok) {
+        /* Try 9600 */
+        USART_InitTypeDef USART_InitStructure;
+        printf("[CFG] Step2: 115200 failed, trying 9600...\r\n");
+        USART_Cmd(ESP01S_USART, DISABLE);
+        USART_InitStructure.USART_BaudRate = 9600;
+        USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+        USART_InitStructure.USART_StopBits = USART_StopBits_1;
+        USART_InitStructure.USART_Parity = USART_Parity_No;
+        USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+        USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+        USART_Init(ESP01S_USART, &USART_InitStructure);
+        USART_Cmd(ESP01S_USART, ENABLE);
+        delay_ms(200);
+        RingBuf_Flush();
+        ok = AT_WaitOK("AT", 2000);
+        if (ok) {
+            printf("[CFG] Step2: Works at 9600, setting to 115200...\r\n");
+            AT_WaitOK("AT+UART_DEF=115200,8,1,0,0", 2000);
+            USART_Cmd(ESP01S_USART, DISABLE);
+            USART_InitStructure.USART_BaudRate = 115200;
+            USART_Init(ESP01S_USART, &USART_InitStructure);
+            USART_Cmd(ESP01S_USART, ENABLE);
+            delay_ms(200);
+            RingBuf_Flush();
+            ok = AT_WaitOK("AT", 2000);
+        }
     }
-
-    /* Step 3: Set AP mode */
-    AT_WaitOK("AT+CWMODE=2", 2000);
-
-    /* Step 4: Create AP: SSID=FishTank, password=12345678, ch=1, enc=WPA2 */
-    AT_WaitOK("AT+CWSAP=\"FishTank\",\"12345678\",1,3", 3000);
-    delay_ms(1000);
-
-    /* Step 5: Enable multiple connections */
-    AT_WaitOK("AT+CIPMUX=1", 2000);
-
-    /* Step 6: Start TCP server on port 8080 */
-    if (!AT_WaitOK("AT+CIPSERVER=1,8080", 2000)) {
-        /* Retry once: server might need more time after AP creation */
-        delay_ms(1000);
-        AT_WaitOK("AT+CIPSERVER=1,8080", 2000);
+    if (!ok) {
+        /* Try 74880 */
+        USART_InitTypeDef USART_InitStructure;
+        printf("[CFG] Step2: trying 74880...\r\n");
+        USART_Cmd(ESP01S_USART, DISABLE);
+        USART_InitStructure.USART_BaudRate = 74880;
+        USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+        USART_InitStructure.USART_StopBits = USART_StopBits_1;
+        USART_InitStructure.USART_Parity = USART_Parity_No;
+        USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+        USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+        USART_Init(ESP01S_USART, &USART_InitStructure);
+        USART_Cmd(ESP01S_USART, ENABLE);
+        delay_ms(200);
+        RingBuf_Flush();
+        ok = AT_WaitOK("AT", 2000);
+        if (ok) {
+            printf("[CFG] Step2: Works at 74880, setting to 115200...\r\n");
+            AT_WaitOK("AT+UART_DEF=115200,8,1,0,0", 2000);
+            USART_Cmd(ESP01S_USART, DISABLE);
+            USART_InitStructure.USART_BaudRate = 115200;
+            USART_Init(ESP01S_USART, &USART_InitStructure);
+            USART_Cmd(ESP01S_USART, ENABLE);
+            delay_ms(200);
+            RingBuf_Flush();
+            ok = AT_WaitOK("AT", 2000);
+        }
     }
+    printf("[CFG] Step2: %s\r\n", ok ? "OK" : "FAIL");
 
-    /* Step 7: Server timeout 120 seconds */
-    AT_WaitOK("AT+CIPSTO=120", 2000);
+    printf("[CFG] Step3: Set AP mode...\r\n");
+    ok = AT_WaitOK("AT+CWMODE=2", 2000);
+    printf("[CFG] Step3: %s\r\n", ok ? "OK" : "FAIL");
 
-    /* Step 8: Verify AP IP address */
+    printf("[CFG] Step4: Create AP...\r\n");
+    ok = AT_WaitOK("AT+CWSAP=\"ESP8266\",\"12345678\",1,3", 3000);
+    delay_ms(1000);
+    printf("[CFG] Step4: %s\r\n", ok ? "OK" : "FAIL");
+
+    printf("[CFG] Step5: Enable MUX...\r\n");
+    ok = AT_WaitOK("AT+CIPMUX=1", 2000);
+    printf("[CFG] Step5: %s\r\n", ok ? "OK" : "FAIL");
+
+    printf("[CFG] Step6: Start TCP server...\r\n");
+    ok = AT_WaitOK("AT+CIPSERVER=1,8080", 2000);
+    if (!ok) {
+        printf("[CFG] Step6: Retry...\r\n");
+        delay_ms(1000);
+        ok = AT_WaitOK("AT+CIPSERVER=1,8080", 2000);
+    }
+    printf("[CFG] Step6: %s\r\n", ok ? "OK" : "FAIL");
+
+    printf("[CFG] Step7: Set timeout...\r\n");
+    ok = AT_WaitOK("AT+CIPSTO=120", 2000);
+    printf("[CFG] Step7: %s\r\n", ok ? "OK" : "FAIL");
+
+    printf("[CFG] Step8: Check IP...\r\n");
     ESP01S_SendCmd("AT+CIFSR", "192.168.4.1", 2000);
+    printf("[CFG] Init complete.\r\n");
 }
 
 /* ======================== Frame TX ======================== */
@@ -307,7 +362,6 @@ static void ESP01S_ConfigSequence(void)
  * @param  cmd: Command byte
  * @param  data: Payload data
  * @param  len: Payload length
- * @retval None
  */
 static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, uint8_t len)
 {
@@ -317,7 +371,10 @@ static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, 
     uint16_t frameLen;
     char cipSendCmd[32];
 
-    if (!s_clientConnected) return;
+    if (!s_clientConnected) {
+        printf("[SEND] No client connected, skip.\r\n");
+        return;
+    }
 
     /* Build frame: HEADER | CMD | LEN | PAYLOAD | CHECKSUM | END */
     frameLen = (uint16_t)len + FRAME_OVERHEAD;
@@ -336,128 +393,247 @@ static void ESP01S_SendFrame(uint8_t link_id, uint8_t cmd, const uint8_t* data, 
 
     /* AT+CIPSEND=<link_id>,<length> */
     sprintf(cipSendCmd, "AT+CIPSEND=%d,%d", link_id, (int)frameLen);
-    if (!ESP01S_SendCmd(cipSendCmd, ">", 2000)) {
-        /* Retry once after brief delay */
-        delay_ms(100);
-        if (!ESP01S_SendCmd(cipSendCmd, ">", 2000)) return;
+    printf("[SEND] CMD: %s\r\n", cipSendCmd);
+    if (!ESP01S_SendCmd(cipSendCmd, ">", 1000)) {
+        printf("[SEND] FAILED - no > prompt\r\n");
+        return;
     }
+    printf("[SEND] Got > prompt, sending frame...\r\n");
 
-    /* Send raw frame data */
     USART_SendBytes(frame, frameLen);
 
-    /* Wait for SEND OK (short timeout, data is small) */
     {
         uint16_t elapsed = 0;
-        while (elapsed < 500) {
+        while (elapsed < 200) {
             delay_ms(10);
             elapsed += 10;
             if (RingBuf_Contains("SEND OK")) {
-                RingBuf_Flush();
+                printf("[SEND] SEND OK confirmed\r\n");
+                RingBuf_SkipUntil("SEND OK");
                 return;
             }
         }
-        RingBuf_Flush();
+        printf("[SEND] Timeout waiting for SEND OK\r\n");
+        RingBuf_SkipUntil("SEND OK");
     }
 }
 
 /* ======================== Public TX Functions ======================== */
 
+extern volatile uint32_t TimeCnt_ms;  /* Defined in stm32f10x_it.c */
+
 void ESP01S_SendSensorData(void)
 {
+    static uint32_t lastSendTick = 0;
+    uint32_t now;
     uint8_t payload[14];
-    float f;
 
     if (!s_clientConnected) return;
 
-    /* waterTemp: float little-endian */
-    f = Record.waterTemp;
-    memcpy(&payload[0], &f, 4);
+    /* Rate limit: skip if less than 2s since last send */
+    now = TimeCnt_ms;
+    if ((now - lastSendTick) < 2000) return;
+    lastSendTick = now;
 
-    /* phValue: float little-endian */
-    f = Record.phValue;
-    memcpy(&payload[4], &f, 4);
+    /* Pack WaterTemp (float, 4 bytes) */
+    memcpy(&payload[0], &Record.waterTemp, 4);
 
-    /* waterLevel: uint8 */
+    /* Pack PH_Value (float, 4 bytes) */
+    memcpy(&payload[4], &Record.phValue, 4);
+
+    /* Pack WaterLevel (uint8, 1 byte) */
     payload[8] = Record.waterLevel;
 
-    /* airQuality: uint16 big-endian */
+    /* Pack AirQuality (uint16, big-endian, 2 bytes) */
     payload[9]  = (uint8_t)(Record.airQuality >> 8);
     payload[10] = (uint8_t)(Record.airQuality & 0xFF);
 
-    /* runMode: uint8 */
+    /* Pack RunMode (uint8, 1 byte) */
     payload[11] = Record.runMode;
 
-    /* feedCountdown: uint16 big-endian */
+    /* Pack FeedCountdown (int16 -> uint16 big-endian, clamp negative to 0) */
     {
-        uint16_t fc = (uint16_t)Record.feedCountdown;
+        uint16_t fc = (Record.feedCountdown > 0) ? (uint16_t)Record.feedCountdown : 0;
         payload[12] = (uint8_t)(fc >> 8);
         payload[13] = (uint8_t)(fc & 0xFF);
     }
 
     ESP01S_SendFrame(s_clientLinkId, CMD_SENSOR_DATA, payload, 14);
+    printf("[TX] Sensor data: T=%.1f PH=%.1f WL=%d%%\r\n",
+           Record.waterTemp, Record.phValue, Record.waterLevel);
 }
 
-void ESP01S_SendDeviceStatus(void)
+uint8_t ESP01S_IsClientConnected(void)
 {
-    uint8_t payload[5];
-
-    if (!s_clientConnected) return;
-
-    /* relayState: bit0=heat, bit1=fill, bit2=drain, bit3=oxygen */
-    payload[0] = 0;
-    if (Flag.relayHeat)  payload[0] |= 0x01;
-    if (Flag.relayFill)  payload[0] |= 0x02;
-    if (Flag.relayDrain) payload[0] |= 0x04;
-    if (Flag.relayOxygen)payload[0] |= 0x08;
-
-    /* alarmEnable */
-    payload[1] = Flag.alarmEnable;
-
-    /* feeding */
-    payload[2] = Flag.feeding;
-
-    /* reserved */
-    payload[3] = 0;
-    payload[4] = 0;
-
-    ESP01S_SendFrame(s_clientLinkId, CMD_DEVICE_STATUS, payload, 5);
+    return s_clientConnected;
 }
 
-void ESP01S_SendAlarm(uint8_t type, uint8_t status)
+void ESP01S_DumpRingBuf(void)
 {
-    uint8_t payload[2];
+    uint16_t count, i;
 
-    if (!s_clientConnected) return;
+    if (s_ringHead >= s_ringTail)
+        count = s_ringHead - s_ringTail;
+    else
+        count = ESP01S_RINGBUF_SIZE - s_ringTail + s_ringHead;
 
-    payload[0] = type;
-    payload[1] = status;
+    if (count == 0) {
+        printf("[DUMP] RingBuf empty\r\n");
+        return;
+    }
 
-    ESP01S_SendFrame(s_clientLinkId, CMD_ALARM_EVENT, payload, 2);
+    printf("[DUMP] RingBuf %d bytes: ", count);
+    for (i = 0; i < count && i < 64; i++) {
+        uint8_t b = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
+        printf("%02X ", b);
+    }
+    if (count > 64) printf("...");
+    printf("\r\n");
+
+    printf("[DUMP] ASCII: ");
+    for (i = 0; i < count && i < 64; i++) {
+        uint8_t b = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
+        printf("%c", (b >= 0x20 && b < 0x7F) ? b : '.');
+    }
+    if (count > 64) printf("...");
+    printf("\r\n");
+}
+
+void ESP01S_FlushRingBuf(void)
+{
+    s_ringTail = s_ringHead;
+}
+
+void ESP01S_QueryStatus(void)
+{
+    uint16_t elapsed = 0;
+    uint16_t count, i;
+    uint16_t scanCount;
+    uint8_t scanBuf[256];
+
+    RingBuf_Flush();
+    USART_SendString("AT+CIPSTATUS\r\n");
+
+    while (elapsed < 2000) {
+        delay_ms(50);
+        elapsed += 50;
+        if (RingBuf_Contains("OK")) break;
+        if (RingBuf_Contains("ERROR")) break;
+    }
+
+    if (s_ringHead >= s_ringTail)
+        count = s_ringHead - s_ringTail;
+    else
+        count = ESP01S_RINGBUF_SIZE - s_ringTail + s_ringHead;
+
+    scanCount = count < 256 ? count : 256;
+    for (i = 0; i < scanCount; i++) {
+        scanBuf[i] = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
+    }
+
+    printf("[CIPSTATUS] Response (%d bytes): ", count);
+    for (i = 0; i < scanCount && i < 128; i++) {
+        printf("%c", (scanBuf[i] >= 0x20 && scanBuf[i] < 0x7F) ? scanBuf[i] : '.');
+    }
+    printf("\r\n");
+
+    for (i = 0; i + 9 <= scanCount; i++) {
+        if (memcmp(&scanBuf[i], "STATUS:3", 8) == 0) {
+            printf("[CIPSTATUS] STATUS:3 = has connections\r\n");
+            {
+                uint16_t j;
+                for (j = 0; j + 12 <= scanCount; j++) {
+                    if (memcmp(&scanBuf[j], "+CIPSTATUS:", 11) == 0) {
+                        uint8_t lid = scanBuf[j + 11] - '0';
+                        if (lid <= 4) {
+                            if (!s_clientConnected) {
+                                s_clientLinkId = lid;
+                                s_clientConnected = 1;
+                                printf("[CIPSTATUS] Found client on link_id=%d\r\n", lid);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            RingBuf_Flush();
+            return;
+        }
+    }
+
+    for (i = 0; i + 9 <= scanCount; i++) {
+        if (memcmp(&scanBuf[i], "STATUS:", 7) == 0) {
+            printf("[CIPSTATUS] STATUS=%c\r\n", scanBuf[i + 7]);
+            break;
+        }
+    }
+
+    RingBuf_Flush();
+}
+
+void ESP01S_EnsureServer(void)
+{
+    uint16_t elapsed = 0;
+    uint16_t count, i;
+    uint16_t scanCount;
+    uint8_t scanBuf[128];
+    uint8_t hasServer = 0;
+
+    RingBuf_Flush();
+    USART_SendString("AT+CIPSTATUS\r\n");
+
+    while (elapsed < 2000) {
+        delay_ms(50);
+        elapsed += 50;
+        if (RingBuf_Contains("OK")) break;
+    }
+
+    if (s_ringHead >= s_ringTail)
+        count = s_ringHead - s_ringTail;
+    else
+        count = ESP01S_RINGBUF_SIZE - s_ringTail + s_ringHead;
+
+    scanCount = count < 128 ? count : 128;
+    for (i = 0; i < scanCount; i++) {
+        scanBuf[i] = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
+    }
+
+    for (i = 0; i + 11 <= scanCount; i++) {
+        if (memcmp(&scanBuf[i], "+CIPSTATUS:", 11) == 0) {
+            hasServer = 1;
+            break;
+        }
+    }
+
+    for (i = 0; i + 8 <= scanCount; i++) {
+        if (memcmp(&scanBuf[i], "STATUS:2", 8) == 0 ||
+            memcmp(&scanBuf[i], "STATUS:3", 8) == 0) {
+            hasServer = 1;
+            break;
+        }
+    }
+
+    RingBuf_Flush();
+
+    if (!hasServer) {
+        printf("[SERVER] TCP server not detected, restarting...\r\n");
+        AT_WaitOK("AT+CIPMUX=1", 2000);
+        AT_WaitOK("AT+CIPSERVER=1,8080", 2000);
+        AT_WaitOK("AT+CIPSTO=120", 2000);
+        printf("[SERVER] TCP server restarted.\r\n");
+    } else {
+        printf("[SERVER] TCP server OK.\r\n");
+    }
 }
 
 /* ======================== Frame RX Parsing ======================== */
 
 /**
- * @brief  Parse a float in little-endian from a byte array.
- */
-static float ParseFloatLE(const uint8_t* buf)
-{
-    float val;
-    memcpy(&val, buf, 4);
-    return val;
-}
-
-/**
- * @brief  Parse a uint16 in big-endian from a byte array.
- */
-static uint16_t ParseU16BE(const uint8_t* buf)
-{
-    return ((uint16_t)buf[0] << 8) | buf[1];
-}
-
-/**
  * @brief  Handle a received protocol frame.
  * @param  frame: Pointer to frame bytes (includes HEADER..END)
+ *
+ * Note: Board has only 1 LED (LED_Name_1 on PB9).
+ *       CMD_LED_CONTROL: led_id is ignored, state=1 means ON, 0 means OFF.
  */
 static void ESP01S_HandleFrame(const uint8_t* frame)
 {
@@ -466,124 +642,90 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
     const uint8_t* payload = &frame[3];
 
     switch (cmd) {
-    case CMD_QUERY_STATUS:
-        /* APP requests current status - send both sensor data and device status */
-        ESP01S_SendSensorData();
-        ESP01S_SendDeviceStatus();
+    case CMD_ECHO_REQUEST:
+        ESP01S_SendFrame(s_clientLinkId, CMD_ECHO_REQUEST, payload, len);
         break;
-
+    case CMD_LED_CONTROL:
+        /* LEN>=1: state(0=OFF,1=ON) */
+        if (len >= 1) {
+            uint8_t state = payload[0];
+            if (state) {
+                LED_On(LED_Name_1);
+            } else {
+                LED_Off(LED_Name_1);
+            }
+            printf("[LED] LED1 %s\r\n", state ? "ON" : "OFF");
+        }
+        break;
     case CMD_SWITCH_MODE:
-        /* LEN=1: 0=auto, 1=manual */
+        /* LEN>=1: mode(0=auto, 1=manual) */
         if (len >= 1) {
             Record.runMode = payload[0] ? 1 : 0;
-            Flag.manualTimeout = 60;
-            ESP01S_SendDeviceStatus();
+            printf("[RX] Switch mode: %s\r\n", Record.runMode ? "MANUAL" : "AUTO");
         }
         break;
-
     case CMD_CONTROL_RELAY:
-        /* LEN=2: relayId + state */
+        /* LEN>=2: relay_id(0-3), state(0=OFF,1=ON) */
         if (len >= 2) {
             uint8_t relayId = payload[0];
-            uint8_t state   = payload[1] ? 1 : 0;
+            uint8_t state = payload[1] ? 1 : 0;
             switch (relayId) {
-            case 0: Flag.relayHeat   = state; break;
-            case 1: Flag.relayFill   = state; break;
-            case 2: Flag.relayDrain  = state; break;
-            case 3: Flag.relayOxygen = state; break;
-            default: break;
+                case 0: Flag.relayHeat   = state; printf("[RX] Relay Heat: %s\r\n", state ? "ON" : "OFF"); break;
+                case 1: Flag.relayFill   = state; printf("[RX] Relay Fill: %s\r\n", state ? "ON" : "OFF"); break;
+                case 2: Flag.relayDrain  = state; printf("[RX] Relay Drain: %s\r\n", state ? "ON" : "OFF"); break;
+                case 3: Flag.relayOxygen = state; printf("[RX] Relay Oxygen: %s\r\n", state ? "ON" : "OFF"); break;
+                default: printf("[RX] Unknown relay ID: %d\r\n", relayId); break;
             }
-            /* Safety: fill/drain mutual exclusion */
-            if (Flag.relayFill && Flag.relayDrain) {
-                Flag.relayDrain = 0;
-            }
-            /* Reset manual timeout on relay change */
-            Flag.manualTimeout = 60;
-            /* Notify APP of new status */
-            ESP01S_SendDeviceStatus();
         }
         break;
-
-    case CMD_SYNC_THRESHOLDS:
-        /* LEN=20: tempLower(4) + tempUpper(4) + airQualityMax(2) +
-         *         phLower(4) + phUpper(4) + waterLevelMin(1) + waterLevelMax(1) */
-        if (len >= 20) {
-            Record.tempLower     = ParseFloatLE(&payload[0]);
-            Record.tempUpper     = ParseFloatLE(&payload[4]);
-            Record.airQualityMax = ParseU16BE(&payload[8]);
-            Record.phLower       = ParseFloatLE(&payload[10]);
-            Record.phUpper       = ParseFloatLE(&payload[14]);
-            Record.waterLevelMin = payload[18];
-            Record.waterLevelMax = payload[19];
-            ESP01S_SendDeviceStatus();
-        }
-        break;
-
     case CMD_TRIGGER_FEED:
-        /* LEN=0: trigger manual feed */
-        if (Flag.feeding == 0) {
-            Flag.feeding = 1;
-            Record.feedCountdown = 3;  /* 3-second feed cycle */
-        }
+        /* LEN>=0: no payload */
+        Flag.feeding = 1;
+        Record.feedCountdown = 0;
+        printf("[RX] Trigger feed\r\n");
         break;
-
     case CMD_SET_ALARM:
-        /* LEN=1: enabled(0/1) */
+        /* LEN>=1: enabled(0=off,1=on) */
         if (len >= 1) {
             Flag.alarmEnable = payload[0] ? 1 : 0;
-            ESP01S_SendDeviceStatus();
+            printf("[RX] Alarm enable: %s\r\n", Flag.alarmEnable ? "ON" : "OFF");
         }
         break;
-
-    case CMD_SET_FEED_INTERVAL:
-        /* LEN=2: seconds(uint16 BE) */
-        if (len >= 2) {
-            Record.feedInterval = ParseU16BE(&payload[0]);
-            ESP01S_SendDeviceStatus();
-        }
-        break;
-
     default:
+        printf("[RX] Unknown CMD=0x%02X LEN=%d\r\n", cmd, len);
         break;
     }
 }
 
 /**
  * @brief  Extract and process protocol frames from a data buffer.
- * @param  data: Raw data bytes (may contain +IPD prefix, etc.)
- * @param  dataLen: Number of bytes in data
  */
 static void ESP01S_ParseFrames(const uint8_t* data, uint16_t dataLen)
 {
     uint16_t i = 0;
 
     while (i < dataLen) {
-        /* Search for frame header */
         if (data[i] != FRAME_HEADER) {
             i++;
             continue;
         }
 
-        /* Need at least HEAD + CMD + LEN = 3 bytes */
         if (i + 3 > dataLen) break;
 
         {
             uint8_t payloadLen = data[i + 2];
             uint16_t frameSize = (uint16_t)payloadLen + FRAME_OVERHEAD;
 
-            /* Check if we have a complete frame */
             if (i + frameSize > dataLen) {
                 i++;
                 continue;
             }
 
-            /* Verify frame end */
             if (data[i + frameSize - 1] != FRAME_END) {
                 i++;
                 continue;
             }
 
-            /* Verify checksum */
             {
                 uint8_t calcSum = 0;
                 uint8_t j;
@@ -596,7 +738,6 @@ static void ESP01S_ParseFrames(const uint8_t* data, uint16_t dataLen)
                 }
             }
 
-            /* Valid frame found - handle it */
             ESP01S_HandleFrame(&data[i]);
             i += frameSize;
         }
@@ -605,16 +746,7 @@ static void ESP01S_ParseFrames(const uint8_t* data, uint16_t dataLen)
 
 /* ======================== +IPD Parser ======================== */
 
-/**
- * State machine for parsing +IPD,<link_id>,<length>:<data> from ring buffer.
- * Called from ESP01S_Process().
- *
- * Strategy: scan the ring buffer for "+IPD", parse the header,
- * extract the specified number of bytes as the data payload,
- * then call ESP01S_ParseFrames on that payload.
- */
-
-/* Simple decimal parser: read digits from ring buffer at given index */
+/** Simple decimal parser: read digits from ring buffer at given index */
 static int16_t RingBuf_ParseNumber(uint16_t startIdx, uint16_t* outEndIdx, uint16_t maxLen)
 {
     int16_t value = 0;
@@ -644,9 +776,6 @@ static int16_t RingBuf_ParseNumber(uint16_t startIdx, uint16_t* outEndIdx, uint1
 void ESP01S_Process(void)
 {
     uint16_t count, i;
-    uint8_t tmpBuf[256];
-
-    /* Calculate available bytes */
     if (s_ringHead >= s_ringTail)
         count = s_ringHead - s_ringTail;
     else
@@ -656,21 +785,16 @@ void ESP01S_Process(void)
 
     /* ---- Check for WiFi CONNECT/DISCONNECT notifications ---- */
     {
-        /* Scan the ring buffer for "WIFI CONNECTED" or "WIFI DISCONNECTED" */
-        /* We scan a linear copy to simplify string searching */
         uint16_t scanCount = count < 64 ? count : 64;
         uint8_t scanBuf[64];
         for (i = 0; i < scanCount; i++) {
             scanBuf[i] = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
         }
 
-        /* Check for WIFI CONNECTED */
         for (i = 0; i + 14 <= scanCount; i++) {
             if (memcmp(&scanBuf[i], "WIFI CONNECTED", 14) == 0) {
                 ESP01S_WiFiConnected = 1;
-                /* Skip past this line */
                 RingBuf_SkipUntil("WIFI CONNECTED");
-                /* Recalculate count */
                 if (s_ringHead >= s_ringTail)
                     count = s_ringHead - s_ringTail;
                 else
@@ -679,7 +803,6 @@ void ESP01S_Process(void)
             }
         }
 
-        /* Check for WIFI DISCONNECTED */
         for (i = 0; i + 17 <= scanCount; i++) {
             if (memcmp(&scanBuf[i], "WIFI DISCONNECTED", 17) == 0) {
                 ESP01S_WiFiConnected = 0;
@@ -702,14 +825,13 @@ void ESP01S_Process(void)
             scanBuf[i] = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
         }
 
-        /* Look for ",CONNECT" pattern */
         for (i = 0; i + 8 <= scanCount; i++) {
             if (memcmp(&scanBuf[i], ",CONNECT", 8) == 0) {
-                /* Extract link ID: digit before ,CONNECT */
                 if (i > 0 && scanBuf[i - 1] >= '0' && scanBuf[i - 1] <= '4') {
                     s_clientLinkId = scanBuf[i - 1] - '0';
                     s_clientConnected = 1;
                     s_connectCount++;
+                    printf("[NET] Client CONNECTED link_id=%d\r\n", s_clientLinkId);
                 }
                 RingBuf_SkipUntil(",CONNECT");
                 if (s_ringHead >= s_ringTail)
@@ -720,7 +842,6 @@ void ESP01S_Process(void)
             }
         }
 
-        /* Look for ",CLOSED" pattern */
         scanCount = count < 32 ? count : 32;
         for (i = 0; i < scanCount; i++) {
             scanBuf[i] = s_ringBuf[(s_ringTail + i) % ESP01S_RINGBUF_SIZE];
@@ -729,6 +850,7 @@ void ESP01S_Process(void)
             if (memcmp(&scanBuf[i], ",CLOSED", 7) == 0) {
                 s_clientConnected = 0;
                 s_disconnectCount++;
+                printf("[NET] Client DISCONNECTED\r\n");
                 RingBuf_SkipUntil(",CLOSED");
                 if (s_ringHead >= s_ringTail)
                     count = s_ringHead - s_ringTail;
@@ -740,7 +862,6 @@ void ESP01S_Process(void)
     }
 
     /* ---- Check for +IPD data ---- */
-    /* +IPD,<link_id>,<length>:<data> */
     {
         uint16_t scanCount = count < 128 ? count : 128;
         uint8_t scanBuf[128];
@@ -759,59 +880,59 @@ void ESP01S_Process(void)
             }
         }
 
+        if (!foundIPD && scanCount > 0) {
+            static uint32_t lastNoIpdDbg = 0;
+            if ((TimeCnt_ms - lastNoIpdDbg) >= 3000 && scanCount > 4) {
+                lastNoIpdDbg = TimeCnt_ms;
+                printf("[IPD] No +IPD found in %d bytes: ", scanCount);
+                { uint16_t _di; for (_di = 0; _di < scanCount && _di < 20; _di++) printf("%02X ", scanBuf[_di]); }
+                printf("\r\n");
+            }
+        }
+
         if (foundIPD) {
-            /* Parse: +IPD,<link_id>,<length>:<data> */
-            uint16_t pos = ipdPos + 4;  /* After "+IPD" */
+            uint16_t pos = ipdPos + 4;
             int16_t linkId, dataLen;
             uint16_t endPos;
             uint16_t dataAvail;
             uint16_t dataStartRingIdx;
 
-            /* Expect ',' */
             if (pos >= scanCount || scanBuf[pos] != ',') {
-                /* Not a valid +IPD, skip it */
                 RingBuf_SkipUntil("+IPD");
                 return;
             }
-            pos++;  /* Skip ',' */
+            pos++;
 
-            /* Parse link_id */
             linkId = RingBuf_ParseNumber((s_ringTail + pos) % ESP01S_RINGBUF_SIZE, &endPos, 2);
             if (linkId < 0) {
                 RingBuf_SkipUntil("+IPD");
                 return;
             }
 
-            /* Recalculate pos from endPos */
             if (endPos >= s_ringTail)
                 pos = endPos - s_ringTail;
             else
                 pos = ESP01S_RINGBUF_SIZE - s_ringTail + endPos;
 
-            /* Expect ',' */
             if (pos < scanCount && scanBuf[pos] == ',') {
                 pos++;
             }
 
-            /* Parse data length */
             dataLen = RingBuf_ParseNumber((s_ringTail + pos) % ESP01S_RINGBUF_SIZE, &endPos, 5);
             if (dataLen <= 0) {
                 RingBuf_SkipUntil("+IPD");
                 return;
             }
 
-            /* Recalculate pos from endPos */
             if (endPos >= s_ringTail)
                 pos = endPos - s_ringTail;
             else
                 pos = ESP01S_RINGBUF_SIZE - s_ringTail + endPos;
 
-            /* Expect ':' */
             if (pos < scanCount && scanBuf[pos] == ':') {
                 pos++;
             }
 
-            /* Calculate how many data bytes are actually available in ring buffer */
             {
                 uint16_t totalAvail;
                 if (s_ringHead >= s_ringTail)
@@ -822,7 +943,6 @@ void ESP01S_Process(void)
                 dataAvail = totalAvail > pos ? totalAvail - pos : 0;
 
                 if (dataAvail >= (uint16_t)dataLen) {
-                    /* We have all the data bytes - extract them */
                     uint8_t extractBuf[128];
                     uint16_t extractLen = (uint16_t)dataLen;
                     if (extractLen > sizeof(extractBuf)) extractLen = sizeof(extractBuf);
@@ -832,18 +952,20 @@ void ESP01S_Process(void)
                         extractBuf[i] = s_ringBuf[(dataStartRingIdx + i) % ESP01S_RINGBUF_SIZE];
                     }
 
-                    /* Advance tail past the entire +IPD block */
                     s_ringTail = (dataStartRingIdx + extractLen) % ESP01S_RINGBUF_SIZE;
 
-                    /* Parse frames from extracted data */
+                    printf("[RX] +IPD len=%d, data: ", extractLen);
+                    { uint16_t _di; for (_di = 0; _di < extractLen && _di < 16; _di++) printf("%02X ", extractBuf[_di]); }
+                    printf("\r\n");
+
                     ESP01S_ParseFrames(extractBuf, extractLen);
+                    printf("[RX] Parse done.\r\n");
                 }
-                /* else: not enough data yet, wait for next Process() call */
             }
         }
     }
 
-    /* ---- Garbage collection: if ring buffer is >80% full, discard old data ---- */
+    /* ---- Garbage collection ---- */
     {
         uint16_t used;
         if (s_ringHead >= s_ringTail)
@@ -852,7 +974,6 @@ void ESP01S_Process(void)
             used = ESP01S_RINGBUF_SIZE - s_ringTail + s_ringHead;
 
         if (used > (ESP01S_RINGBUF_SIZE * 80 / 100)) {
-            /* Discard oldest 25% to prevent overflow */
             uint16_t discard = used / 4;
             s_ringTail = (s_ringTail + discard) % ESP01S_RINGBUF_SIZE;
         }
@@ -861,23 +982,14 @@ void ESP01S_Process(void)
 
 /* ======================== Public Init ======================== */
 
-#include "bsp_beep.h"
-
 void ESP01S_Init(void)
 {
-    /* Initialize USART2 for ESP-01S communication */
     ESP01S_USART_Init();
 
-    /* Flush any startup noise */
     delay_ms(500);
     RingBuf_Flush();
 
-    /* Run AT command configuration sequence */
     ESP01S_ConfigSequence();
-
-    /* Success indication: 2 short beeps */
-    BEEP_SetCycleDuty(150, 80);
-    BEEP_Blink(2, 1, 1);
 }
 
 /* ======================== End of File ======================== */

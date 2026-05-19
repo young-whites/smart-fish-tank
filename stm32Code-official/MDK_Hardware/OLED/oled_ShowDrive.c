@@ -5,30 +5,21 @@
 
 
 
-/**
-  * @brief  OLED 清屏函数
-  *	@param 	None
-  * @retval None
-  */
 void OLED_Full_OFF(void)
 {
 	uint8_t i, n;
 	for (i = 0; i < 8; i++)
 	{
 
-		OLED_Write_Byte(0xb0 + i, OLED_CMD);   // 设置起始页地址（每一页有8小格子）
-		OLED_Write_Byte(0x00, OLED_CMD);       // 设置水平寻址方式
-		OLED_Write_Byte(0x01, OLED_CMD);       // 设置垂直寻址方式
+		OLED_Write_Byte(0xb0 + i, OLED_CMD); 
+		OLED_Write_Byte(0x00, OLED_CMD);      
+		OLED_Write_Byte(0x01, OLED_CMD);      
 		for (n = 0; n < X_WIDTH; n++)
 			OLED_Write_Byte(0x00, OLED_DAT);
 	}
 }
 
-/**
-  * @brief  OLED 清屏函数
-  *	@param 	None
-  * @retval None
-  */
+
 void OLED_Clr_Screen(void)
 {
 	uint8_t i, j;
@@ -43,12 +34,6 @@ void OLED_Clr_Screen(void)
 }
 
 
-/**
-  * @brief  设置坐标函数
-  * @param  row     :  0~7行
-  *		 column  :  0~127列
-  * @retval None
-  */
 void OLED_Set_Pos(uint8_t row, uint8_t column)
 {
 	OLED_Write_Byte(0xB0 + row, OLED_CMD);
@@ -58,13 +43,6 @@ void OLED_Set_Pos(uint8_t row, uint8_t column)
 
 
 
-
-/**
-  * @brief  计算 m^n 幂函数
-  * @param  m : 底数
-  *			n : 幂级数
-  * @retval 返回值为计算结果
-  */
 uint32_t OLED_Calculate_Pow(uint8_t m, uint8_t n)
 {
 	uint32_t result = 1;
@@ -77,28 +55,13 @@ uint32_t OLED_Calculate_Pow(uint8_t m, uint8_t n)
 }
 
 
-
-/****************************************************************************************************************************/
-/* ---------------------------------------------- 显示 6*12 字体的显示驱动函数 ---------------------------------------------*/
-/****************************************************************************************************************************/
-
-
-
- /**
-   * @brief  显示字体大小为6*12的单个汉字(区位码)
-   * @param  row      :  0~7行
-   *		 column   :  0~127列
-   *		 flag     :  反白标志，非0时反白显示
-   *		 *chinese :  字符指针
-   * @retval
-   */
 void ZoneBitCode_OLED_Show_ChineseF6X12(uint8_t row, uint8_t column, uint8_t* chinese, uint8_t flag)
 {
 	uint8_t  i = 0;
 	uint32_t index;
 	for (index = 0; index < sizeof(Hzk12) / 35; index++)      // name[3] + dat[32] ==35
 	{
-		if (Hzk12[index].name[0] == chinese[0] && Hzk12[index].name[1] == chinese[1])  // 对比汉字区码位码
+		if (Hzk12[index].name[0] == chinese[0] && Hzk12[index].name[1] == chinese[1]) 
 		{
 			OLED_Set_Pos(row, column);
 			for (i = 0; i < 12; i++)
@@ -123,18 +86,6 @@ void ZoneBitCode_OLED_Show_ChineseF6X12(uint8_t row, uint8_t column, uint8_t* ch
 
 
 
-
-
-
-
-
-/**
-  * @brief  显示字体大小为6*12的单个汉字
-  * @param  row     :  0~7行
-  *		    column  :  0~127列
-  *		    num	    : 数组的索引号
-  * @retval None
-  */
 void OLED_Show_OneCharF6X12(uint8_t row, uint8_t column, uint8_t character)
 {
 	uint8_t i, index;
@@ -158,16 +109,6 @@ void OLED_Show_OneCharF6X12(uint8_t row, uint8_t column, uint8_t character)
 }
 
 
-
-
-
-/**
-  * @brief  显示字体大小为6*12的单个汉字
-  * @param  row     :  0~7行
-  *		    column  :  0~127列
-  *		    num	    : 数组的索引号
-  * @retval None
-  */
 void OLED_Show_MoreCharF6X12(uint8_t row, uint8_t column, uint8_t* String)
 {
 	uint8_t i = 0;
@@ -186,16 +127,6 @@ void OLED_Show_MoreCharF6X12(uint8_t row, uint8_t column, uint8_t* String)
 
 
 
-
-
-
- /**
-   * @brief  显示字体大小为6*12的单个汉字
-   * @param  row     :  0~7行
-   *		 column  :  0~127列
-   *		 num	 : 数组的索引号
-   * @retval None
-   */
 void OLED_Show_ChineseF6X12(uint8_t row, uint8_t column, uint8_t num)
 {
 	uint8_t i, adder;
@@ -211,16 +142,6 @@ void OLED_Show_ChineseF6X12(uint8_t row, uint8_t column, uint8_t num)
 }
 
 
-
-
-
- /**
-   * @brief  显示字体大小为6*12的不在ASCSII上的字符
-   * @param  row     :  0~7行
-   *		 column  :  0~127列
-   *		 num	 : 数组的索引号
-   * @retval None	 
-   */
 void OLED_Show_OtherCharF6X12(uint8_t row, uint8_t column, uint8_t num)
 {
 	uint8_t i, adder;
@@ -236,20 +157,6 @@ void OLED_Show_OtherCharF6X12(uint8_t row, uint8_t column, uint8_t num)
 }
 
 
-
-
-
-
-
-
-
-/**
-  * @brief  显示字体大小为6*12的数字
-  * @param  row		:  0~7行
-  *			column  :  0~127列
-  *			NumLen  :  数字长度
-  * @retval None
-  */
 void OLED_ShowNumF6X12( uint8_t row, uint8_t column, uint8_t NumLen ,uint32_t Num)
 {
 	uint8_t i;
@@ -280,28 +187,13 @@ void OLED_ShowNumF6X12( uint8_t row, uint8_t column, uint8_t NumLen ,uint32_t Nu
 
 
 
-
-/****************************************************************************************************************************/
-/* ---------------------------------------------- 显示 8*16 字体的显示驱动函数 ---------------------------------------------*/
-/****************************************************************************************************************************/
-
-
-
- /**
-   * @brief  显示字体大小为8*16的单个汉字
-   * @param  row      :  0~7行
-   *		 column   :  0~127列
-   *		 flag     :  反白标志，非0时反白显示
-   *		 *chinese :  字符指针
-   * @retval 
-   */
 void ZoneBitCode_OLED_Show_ChineseF8X16(uint8_t row, uint8_t column, uint8_t* chinese, uint8_t flag)
 {
 	uint8_t  i = 0;
 	uint32_t index;
 	for (index = 0; index < sizeof(Hzk16) / 35; index++)      // name[3] + dat[32] ==35
 	{
-		if (Hzk16[index].name[0] == chinese[0] && Hzk16[index].name[1] == chinese[1])  // 对比汉字区码位码
+		if (Hzk16[index].name[0] == chinese[0] && Hzk16[index].name[1] == chinese[1])  
 		{
 			OLED_Set_Pos(row, column);
 			for (i = 0; i < 16; i++)

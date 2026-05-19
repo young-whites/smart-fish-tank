@@ -7,6 +7,7 @@
 #include "MyTypedef.h"
 #include "ds18b20.h"
 #include "bsp_adc.h"
+#include "bsp_esp01s.h"
 #include "TimingSet.h"
 #include "bsp_esp01s.h"
 
@@ -30,6 +31,9 @@ int main ( void )
 	OLED_Init();
 	DS18B20_Init();
 	ADC_Polling_Init();
+	Debug_USART1_Init();
+	printf("\r\n[SYS] System starting...\r\n");
+	ESP01S_Init();
 
 	/* Relay GPIO initialization */
 	{
@@ -99,62 +103,59 @@ int main ( void )
 	delay_ms(2000);
 	OLED_Clr_Screen();
 
+	static uint8_t lastPage = 0xFF;
+	uint8_t curPage;
+
+	while ( 1 )
 	{
-		static uint8_t lastPage = 0xFF;
-		uint8_t curPage;
-
-		while ( 1 )
+		/* DS18B20 read with fault detection (outside ISR to avoid blocking) */
 		{
-			/* DS18B20 read with fault detection (outside ISR to avoid blocking) */
-			{
-				static uint32_t dsReadCnt = 0;
-				if (++dsReadCnt >= 10) {   /* Every ~1s at 100ms loop */
-					dsReadCnt = 0;
-					float t = DS18B20_GetTemperture();
-					if (t > -50.0f && t < 125.0f) {
-						Record.waterTemp = t;
-						Flag.sensorError &= ~0x01;
-					} else {
-						Flag.sensorError |= 0x01;
-					}
+			static uint32_t dsReadCnt = 0;
+			if (++dsReadCnt >= 10) {   /* Every ~1s at 100ms loop */
+				dsReadCnt = 0;
+				float t = DS18B20_GetTemperture();
+				if (t > -50.0f && t < 125.0f) {
+					Record.waterTemp = t;
+					Flag.sensorError &= ~0x01;
+				} else {
+					Flag.sensorError |= 0x01;
 				}
 			}
-
-			/* Fill/Drain mutual exclusion safety */
-			if (Flag.relayFill && Flag.relayDrain) {
-				Flag.relayDrain = 0;  /* Drain takes priority */
-			}
-
-			/* Relay GPIO output */
-			GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);
-			GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);
-			GPIO_WriteBit(GPIOB, GPIO_Pin_15, Flag.relayDrain ? Bit_SET : Bit_RESET);
-			GPIO_WriteBit(GPIOA, GPIO_Pin_15, Flag.relayOxygen ? Bit_SET : Bit_RESET);
-
-			/* Page change detection and clear screen */
-			curPage = Flag.currentPage * 10 + Flag.subPage;
-			if (curPage != lastPage) {
-				lastPage = curPage;
-				OLED_Clr_Screen();
-			}
-
-						/* Refresh OLED display */
-			OLED_Show_Page(Flag.currentPage);
-
-			/* ESP-01S: process incoming data from WiFi */
-			ESP01S_Process();
-
-			/* ESP-01S: send sensor data every ~1s */
-			{
-				static uint8_t espSendCnt = 0;
-				if (++espSendCnt >= 10) {  /* 100ms loop * 10 = ~1s */
-					espSendCnt = 0;
-					ESP01S_SendSensorData();
-				}
-			}
-
-			delay_ms(100);
 		}
+
+		/* Fill/Drain mutual exclusion safety */
+		if (Flag.relayFill && Flag.relayDrain) {
+			Flag.relayDrain = 0;  /* Drain takes priority */
+		}
+
+		/* Relay GPIO output */
+		GPIO_WriteBit(GPIOB, GPIO_Pin_12, Flag.relayHeat ? Bit_SET : Bit_RESET);
+		GPIO_WriteBit(GPIOB, GPIO_Pin_14, Flag.relayFill ? Bit_SET : Bit_RESET);
+		GPIO_WriteBit(GPIOB, GPIO_Pin_15, Flag.relayDrain ? Bit_SET : Bit_RESET);
+		GPIO_WriteBit(GPIOA, GPIO_Pin_15, Flag.relayOxygen ? Bit_SET : Bit_RESET);
+
+		/* Page change detection and clear screen */
+		curPage = Flag.currentPage * 10 + Flag.subPage;
+		if (curPage != lastPage) {
+			lastPage = curPage;
+			OLED_Clr_Screen();
+		}
+
+		/* Refresh OLED display */
+		OLED_Show_Page(Flag.currentPage);
+
+		/* Sensor data upload to APP (~1s interval) */
+		{
+			static uint32_t uploadCnt = 0;
+			if (++uploadCnt >= 30) {  /* ~3s at 100ms loop - prevent ESP blocking from starving main loop */
+				uploadCnt = 0;
+				ESP01S_SendSensorData();
+			}
+		}
+
+		ESP01S_Process();
+
+		delay_ms(100);
 	}
 }
 
