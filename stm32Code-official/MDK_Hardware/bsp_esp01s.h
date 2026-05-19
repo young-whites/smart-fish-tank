@@ -15,6 +15,7 @@ extern uint8_t ESP01S_WiFiConnected;
 void ESP01S_Init(void);                    /* Initialize USART2 + AT config sequence */
 void ESP01S_Process(void);                 /* Main-loop: parse +IPD / CONNECT / DISCONNECT */
 void ESP01S_SendSensorData(void);          /* Send sensor data frame (CMD 0x01, 14 bytes) to APP */
+void ESP01S_SendDeviceStatus(void);        /* Send device status frame (CMD 0x02, 5 bytes) to APP */
 uint8_t ESP01S_IsClientConnected(void);    /* Check if a TCP client is connected */
 void ESP01S_DumpRingBuf(void);             /* Debug: print ring buffer raw hex */
 void ESP01S_FlushRingBuf(void);            /* Force flush ring buffer */

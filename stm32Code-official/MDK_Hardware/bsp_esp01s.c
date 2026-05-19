@@ -30,13 +30,17 @@
 
 /* TX commands (MCU -> APP) */
 #define CMD_SENSOR_DATA         0x01    /* Sensor data upload (14 bytes) */
+#define CMD_DEVICE_STATUS       0x02    /* Device status upload (5 bytes) */
+#define CMD_ALARM_EVENT         0x03    /* Alarm event (2 bytes) */
 
 /* RX commands (APP -> MCU) */
-#define CMD_ECHO_REQUEST        0x10    /* APP sends echo, MCU responds */
+#define CMD_ECHO_REQUEST        0x10    /* APP sends echo; if LEN=0 send DeviceStatus */
 #define CMD_SWITCH_MODE         0x11    /* APP -> MCU: switch auto/manual mode */
 #define CMD_CONTROL_RELAY       0x12    /* APP -> MCU: control relay */
+#define CMD_SYNC_THRESHOLDS     0x13    /* APP -> MCU: sync thresholds (20 bytes) */
 #define CMD_TRIGGER_FEED        0x14    /* APP -> MCU: trigger feeding */
 #define CMD_SET_ALARM           0x15    /* APP -> MCU: set alarm enable/disable */
+#define CMD_SET_FEED_INTERVAL   0x16    /* APP -> MCU: set feed interval (2 bytes BE) */
 #define CMD_LED_CONTROL         0x20    /* APP controls LED: payload=[led_id, state] */
 
 /* ======================== Ring Buffer ======================== */
@@ -51,6 +55,7 @@ static uint8_t s_clientConnected = 0;      /* 0=no client, 1=client connected */
 static volatile uint32_t s_connectCount = 0;   /* Debug: total connections received */
 static volatile uint32_t s_disconnectCount = 0; /* Debug: total disconnections */
 static volatile uint32_t s_ipdCount = 0;        /* Debug: total +IPD received */
+static volatile uint8_t  s_statusDirty = 1;     /* Flag: DeviceStatus needs re-send */
 
 /* ======================== USART2 Init ======================== */
 static void ESP01S_USART_Init(void)
@@ -461,6 +466,43 @@ void ESP01S_SendSensorData(void)
     ESP01S_SendFrame(s_clientLinkId, CMD_SENSOR_DATA, payload, 14);
     printf("[TX] Sensor data: T=%.1f PH=%.1f WL=%d%%\r\n",
            Record.waterTemp, Record.phValue, Record.waterLevel);
+
+    /* Always send device status after sensor data (rate-limited 500ms) */
+    ESP01S_SendDeviceStatus();
+}
+
+/**
+ * @brief  Send device status frame (CMD 0x02, 5 bytes).
+ *         Rate-limited to min 500ms between sends.
+ */
+void ESP01S_SendDeviceStatus(void)
+{
+    static uint32_t lastSendTick = 0;
+    uint32_t now;
+    uint8_t payload[5];
+
+    if (!s_clientConnected) return;
+
+    now = TimeCnt_ms;
+    if ((now - lastSendTick) < 500) return;
+    lastSendTick = now;
+    s_statusDirty = 0; /* Clear dirty flag on successful send */
+
+    /* relayState bitfield */
+    payload[0] = 0;
+    if (Flag.relayHeat)   payload[0] |= 0x01;
+    if (Flag.relayFill)   payload[0] |= 0x02;
+    if (Flag.relayDrain)  payload[0] |= 0x04;
+    if (Flag.relayOxygen) payload[0] |= 0x08;
+
+    payload[1] = Flag.alarmEnable;
+    payload[2] = Flag.feeding;
+    payload[3] = 0; /* reserved */
+    payload[4] = 0; /* reserved */
+
+    ESP01S_SendFrame(s_clientLinkId, CMD_DEVICE_STATUS, payload, 5);
+    printf("[TX] Device status: relay=0x%02X alrm=%d feed=%d\r\n",
+           payload[0], payload[1], payload[2]);
 }
 
 uint8_t ESP01S_IsClientConnected(void)
@@ -643,7 +685,12 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
 
     switch (cmd) {
     case CMD_ECHO_REQUEST:
-        ESP01S_SendFrame(s_clientLinkId, CMD_ECHO_REQUEST, payload, len);
+        if (len == 0) {
+            /* APP queries status: respond with DeviceStatus */
+            s_statusDirty = 1;
+        } else {
+            ESP01S_SendFrame(s_clientLinkId, CMD_ECHO_REQUEST, payload, len);
+        }
         break;
     case CMD_LED_CONTROL:
         /* LEN>=1: state(0=OFF,1=ON) */
@@ -662,6 +709,7 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
         if (len >= 1) {
             Record.runMode = payload[0] ? 1 : 0;
             printf("[RX] Switch mode: %s\r\n", Record.runMode ? "MANUAL" : "AUTO");
+            s_statusDirty = 1;
         }
         break;
     case CMD_CONTROL_RELAY:
@@ -676,19 +724,44 @@ static void ESP01S_HandleFrame(const uint8_t* frame)
                 case 3: Flag.relayOxygen = state; printf("[RX] Relay Oxygen: %s\r\n", state ? "ON" : "OFF"); break;
                 default: printf("[RX] Unknown relay ID: %d\r\n", relayId); break;
             }
+            s_statusDirty = 1;
         }
         break;
     case CMD_TRIGGER_FEED:
         /* LEN>=0: no payload */
         Flag.feeding = 1;
-        Record.feedCountdown = 0;
+        Record.feedCountdown = 3; /* Keep servo open for 3 seconds */
         printf("[RX] Trigger feed\r\n");
+        s_statusDirty = 1;
         break;
     case CMD_SET_ALARM:
         /* LEN>=1: enabled(0=off,1=on) */
         if (len >= 1) {
             Flag.alarmEnable = payload[0] ? 1 : 0;
             printf("[RX] Alarm enable: %s\r\n", Flag.alarmEnable ? "ON" : "OFF");
+            s_statusDirty = 1;
+        }
+        break;
+    case CMD_SYNC_THRESHOLDS:
+        /* LEN=20: tempLower(4F) tempUpper(4F) airQMax(2BE) phLower(4F) phUpper(4F) wlMin(1U) wlMax(1U) */
+        if (len >= 20) {
+            memcpy(&Record.tempLower, &payload[0], 4);
+            memcpy(&Record.tempUpper, &payload[4], 4);
+            Record.airQualityMax = ((uint16_t)payload[8] << 8) | payload[9];
+            memcpy(&Record.phLower, &payload[10], 4);
+            memcpy(&Record.phUpper, &payload[14], 4);
+            Record.waterLevelMin = payload[18];
+            Record.waterLevelMax = payload[19];
+            printf("[RX] Thresholds synced\r\n");
+            s_statusDirty = 1;
+        }
+        break;
+    case CMD_SET_FEED_INTERVAL:
+        /* LEN=2: seconds (uint16 BE) */
+        if (len >= 2) {
+            Record.feedInterval = ((uint16_t)payload[0] << 8) | payload[1];
+            printf("[RX] Feed interval: %d sec\r\n", Record.feedInterval);
+            s_statusDirty = 1;
         }
         break;
     default:
@@ -776,6 +849,7 @@ static int16_t RingBuf_ParseNumber(uint16_t startIdx, uint16_t* outEndIdx, uint1
 void ESP01S_Process(void)
 {
     uint16_t count, i;
+
     if (s_ringHead >= s_ringTail)
         count = s_ringHead - s_ringTail;
     else
@@ -784,6 +858,8 @@ void ESP01S_Process(void)
     if (count == 0) return;
 
     /* ---- Check for WiFi CONNECT/DISCONNECT notifications ---- */
+    /* ESP-01S AP mode sends: +STA_CONNECTED / +STA_DISCONNECTED */
+    /* ESP-01S STA mode sends: WIFI CONNECTED / WIFI DISCONNECTED */
     {
         uint16_t scanCount = count < 64 ? count : 64;
         uint8_t scanBuf[64];
@@ -792,9 +868,11 @@ void ESP01S_Process(void)
         }
 
         for (i = 0; i + 14 <= scanCount; i++) {
-            if (memcmp(&scanBuf[i], "WIFI CONNECTED", 14) == 0) {
+            if (memcmp(&scanBuf[i], "WIFI CONNECTED", 14) == 0 ||
+                memcmp(&scanBuf[i], "+STA_CONNECTED", 14) == 0) {
                 ESP01S_WiFiConnected = 1;
-                RingBuf_SkipUntil("WIFI CONNECTED");
+                RingBuf_SkipUntil((memcmp(&scanBuf[i], "WIFI", 4) == 0) ? "WIFI CONNECTED" : "+STA_CONNECTED");
+                printf("[NET] WiFi connected\r\n");
                 if (s_ringHead >= s_ringTail)
                     count = s_ringHead - s_ringTail;
                 else
@@ -808,6 +886,32 @@ void ESP01S_Process(void)
                 ESP01S_WiFiConnected = 0;
                 s_clientConnected = 0;
                 RingBuf_SkipUntil("WIFI DISCONNECTED");
+                printf("[NET] WiFi disconnected\r\n");
+                if (s_ringHead >= s_ringTail)
+                    count = s_ringHead - s_ringTail;
+                else
+                    count = ESP01S_RINGBUF_SIZE - s_ringTail + s_ringHead;
+                break;
+            }
+            if (i + 18 <= scanCount && memcmp(&scanBuf[i], "+STA_DISCONNECTED", 17) == 0) {
+                ESP01S_WiFiConnected = 0;
+                s_clientConnected = 0;
+                RingBuf_SkipUntil("+STA_DISCONNECTED");
+                printf("[NET] WiFi disconnected (AP mode)\r\n");
+                if (s_ringHead >= s_ringTail)
+                    count = s_ringHead - s_ringTail;
+                else
+                    count = ESP01S_RINGBUF_SIZE - s_ringTail + s_ringHead;
+                break;
+            }
+        }
+
+        /* Also check for +DIST_STA_IP (AP mode: station got IP) */
+        for (i = 0; i + 12 <= scanCount; i++) {
+            if (memcmp(&scanBuf[i], "+DIST_STA_IP", 12) == 0) {
+                ESP01S_WiFiConnected = 1;
+                RingBuf_SkipUntil("+DIST_STA_IP");
+                printf("[NET] WiFi station got IP (AP mode)\r\n");
                 if (s_ringHead >= s_ringTail)
                     count = s_ringHead - s_ringTail;
                 else

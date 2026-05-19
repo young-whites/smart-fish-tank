@@ -24,6 +24,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h" 
 #include "sys.h"
+#include "bsp_beep.h"
+#include "TimingSet.h"
 
  
  
@@ -123,6 +125,7 @@ void  GENERAL_TIM_2_IRQHandler (void)
 		if ((msCnt % 5)    == 0)		Timing_5ms();
 		if ((msCnt % 2)    == 0)		Timing_2ms();
 										Timing_1ms();
+	BEEP_DrvScan();
 		
 		
 		TIM_ClearITPendingBit(GENERAL_TIM_2 , TIM_FLAG_Update);  		 

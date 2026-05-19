@@ -5,7 +5,6 @@
 #include "bsp_beep.h"
 #include "bsp_adc.h"
 #include "stm32f10x_tim.h"
-#include "bsp_esp01s.h"
 
 extern void OLED_Show_Page(uint8_t page);
 extern void OLED_Clr_Screen(void);
@@ -97,14 +96,7 @@ void Timing_1s(void)
 				Record.feedCountdown = 0;
 				Servo_SetAngle(0);
 				servoOpenSec = 0;
-				autoFeedTimer = 0;  /* Reset timer for next cycle */
 			}
-		}
-
-		/* Safety: ensure servo is closed when not feeding */
-		if (Flag.feeding == 0 && servoOpenSec != 0) {
-			Servo_SetAngle(0);
-			servoOpenSec = 0;
 		}
 	}
 }
@@ -114,7 +106,6 @@ void Timing_1s(void)
 void Timing_1ms(void)
 {
 	KEY_DrvScan();
-	BEEP_DrvScan();
 }
 
 
@@ -188,12 +179,6 @@ void Timing_500ms(void)
 {
 	/* --- Auto control (Auto mode only) --- */
 	if (Record.runMode == 0) {
-		/* Save previous relay state to detect changes */
-		uint8_t prevHeat   = Flag.relayHeat;
-		uint8_t prevFill   = Flag.relayFill;
-		uint8_t prevDrain  = Flag.relayDrain;
-		uint8_t prevOxygen = Flag.relayOxygen;
-
 		/* Temperature hysteresis control */
 		if (Record.waterTemp < Record.tempLower) {
 			Flag.relayHeat = 1;
@@ -218,12 +203,6 @@ void Timing_500ms(void)
 			Flag.relayOxygen = 1;
 		} else {
 			Flag.relayOxygen = 0;
-		}
-
-		/* If relay state changed, notify APP */
-		if (prevHeat != Flag.relayHeat || prevFill != Flag.relayFill ||
-			prevDrain != Flag.relayDrain || prevOxygen != Flag.relayOxygen) {
-			ESP01S_SendDeviceStatus();
 		}
 	}
 
